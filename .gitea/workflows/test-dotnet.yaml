@@ -7,6 +7,7 @@ on:
       - '**'
     paths-ignore:
       - 'README.md'
+      - '.gitea/workflows/publish-*.yaml'
   pull_request:
     branches: [ main ]
 

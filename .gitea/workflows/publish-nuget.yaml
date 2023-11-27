@@ -25,7 +25,7 @@ jobs:
       run: dotnet build --no-restore --configuration Release Railway/Railway.csproj
 
     - name: Setup nuget source
-      run: dotnet nuget add source --name gitea_registry https://gitea.example.com/api/packages/just/nuget/index.json
+      run: dotnet nuget add source --name gitea_registry https://gitea.jstdev.ru/api/packages/just/nuget/index.json
 
     - name: Create the package
       env:

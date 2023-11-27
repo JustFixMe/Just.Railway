@@ -7,15 +7,12 @@
 
     <AssemblyName>Just.Railway</AssemblyName>
     <RootNamespace>Just.Railway</RootNamespace>
-  </PropertyGroup>
 
-  <PropertyGroup>
     <ReleaseVersion Condition=" '$(ReleaseVersion)' == '' ">1.0.0</ReleaseVersion>
-
     <VersionSuffix Condition=" '$(VersionSuffix)' != '' ">$(VersionSuffix)</VersionSuffix>
     <VersionPrefix Condition=" '$(VersionSuffix)' != '' ">$(ReleaseVersion)</VersionPrefix>
-    
     <Version Condition=" '$(VersionSuffix)' == '' ">$(ReleaseVersion)</Version>
+    <AssemblyVersion>$(ReleaseVersion)</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

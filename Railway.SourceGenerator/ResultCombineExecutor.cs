@@ -7,19 +7,9 @@ using Microsoft.CodeAnalysis;
 
 namespace Just.Railway.SourceGen;
 
-[Generator]
-public class ResultCombineGenerator : IIncrementalGenerator
+internal sealed class ResultCombineExecutor : IGeneratorExecutor
 {
-    public ResultCombineGenerator()
-    {
-    }
-
-    public void Initialize(IncrementalGeneratorInitializationContext context)
-    {
-        context.RegisterSourceOutput(context.CompilationProvider, Execute);
-    }
-
-    private void Execute(SourceProductionContext context, Compilation source)
+    public void Execute(SourceProductionContext context, Compilation source)
     {
         var methods = GenerateCombineMethods();
         var code = $$"""
@@ -39,6 +29,7 @@ public class ResultCombineGenerator : IIncrementalGenerator
 
         context.AddSource("Result.Combine.g.cs", code);
     }
+
 
     private string GenerateCombineMethods()
     {
@@ -95,7 +86,7 @@ public class ResultCombineGenerator : IIncrementalGenerator
             .Select(i => $"result{i}")
             .ToImmutableArray();
         var argsDecl = string.Join(", ", args.Select(x => $"ResultState {x}"));
-        sb.AppendLine($"[GeneratedCodeAttribute(\"{nameof(ResultCombineGenerator)}\", \"1.0.0.0\")]");
+        sb.AppendLine($"[GeneratedCodeAttribute(\"{nameof(ResultCombineExecutor)}\", \"1.0.0.0\")]");
         sb.AppendLine($"private static IEnumerable<string> GetBottom({argsDecl})");
         sb.AppendLine("{");
         foreach (var arg in args)
@@ -185,7 +176,7 @@ public class ResultCombineGenerator : IIncrementalGenerator
         
         string returnExpr = $"return error is null ? new({resultExpansion}) : new(error);";
         var method = $$"""
-        [GeneratedCodeAttribute("{{nameof(ResultCombineGenerator)}}", "1.0.0.0")]
+        [GeneratedCodeAttribute("{{nameof(ResultCombineExecutor)}}", "1.0.0.0")]
         [PureAttribute]
         public static {{resultTypeDecl}} Combine{{templateDecl}}({{paramDecl}})
         {
@@ -211,4 +202,3 @@ public class ResultCombineGenerator : IIncrementalGenerator
         }
     }
 }
-

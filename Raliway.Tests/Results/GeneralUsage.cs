@@ -135,7 +135,7 @@ public class GeneralUsage
                     return "satisfied";
                 }
             );
-        
+
         // Then
         Assert.Equal("satisfied", result);
     }

@@ -16,6 +16,7 @@ public class ResultMethodGenerator : IIncrementalGenerator
         new ResultMatchExecutor(),
         new ResultMapExecutor(),
         new ResultBindExecutor(),
+        new ResultTapExecutor(),
     };
 
     public void Initialize(IncrementalGeneratorInitializationContext context)

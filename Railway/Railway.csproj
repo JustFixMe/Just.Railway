@@ -4,11 +4,14 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <EmitCompilerGeneratedFiles Condition="'$(Configuration)'=='Debug'">true</EmitCompilerGeneratedFiles>
-
     <AssemblyName>Just.Railway</AssemblyName>
     <RootNamespace>Just.Railway</RootNamespace>
-
+    
+    <Authors>JustFixMe</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://gitea.jstdev.ru/just/Just.Railway/</RepositoryUrl>
+    
+    <EmitCompilerGeneratedFiles Condition="'$(Configuration)'=='Debug'">true</EmitCompilerGeneratedFiles>
     <ReleaseVersion Condition=" '$(ReleaseVersion)' == '' ">1.0.0</ReleaseVersion>
     <VersionSuffix Condition=" '$(VersionSuffix)' != '' ">$(VersionSuffix)</VersionSuffix>
     <VersionPrefix Condition=" '$(VersionSuffix)' != '' ">$(ReleaseVersion)</VersionPrefix>

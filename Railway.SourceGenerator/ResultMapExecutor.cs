@@ -13,17 +13,17 @@ internal sealed class ResultMapExecutor : ResultExtensionsExecutor
         var templateArgNames = Enumerable.Range(1, argCount)
             .Select(i => $"T{i}")
             .ToImmutableArray();
-        string separatedTemplateArgs = string.Join(", ", templateArgNames);
 
-        sb.AppendLine($"#region <{separatedTemplateArgs}>");
-
-        string resultValueType = templateArgNames.Length == 1 ? separatedTemplateArgs : $"({separatedTemplateArgs})";
+        string resultTypeDef = GenerateResultTypeDef(templateArgNames);
         string resultValueExpansion = GenerateResultValueExpansion(templateArgNames);
+        string methodTemplateDecl = GenerateTemplateDecl(templateArgNames.Add("R"));
+
+        sb.AppendLine($"#region {resultTypeDef}");
 
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultMapExecutor)}}", "1.0.0.0")]
-        public static Result<R> Map<{{separatedTemplateArgs}}, R>(this in Result<{{resultValueType}}> result, Func<{{separatedTemplateArgs}}, R> mapping)
+        public static Result<R> Map{{methodTemplateDecl}}(this in {{resultTypeDef}} result, Func{{methodTemplateDecl}} mapping)
         {
             return result.State switch
             {
@@ -34,50 +34,60 @@ internal sealed class ResultMapExecutor : ResultExtensionsExecutor
         }
         """);
 
-        sb.AppendLine($$"""
-        [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(ResultMapExecutor)}}", "1.0.0.0")]
-        public static async Task<Result<R>> Map<{{separatedTemplateArgs}}, R>(this Result<{{resultValueType}}> result, Func<{{separatedTemplateArgs}}, Task<R>> mapping)
-        {
-            return result.State switch
-            {
-                ResultState.Success => await mapping({{resultValueExpansion}}).ConfigureAwait(false),
-                ResultState.Error => result.Error!,
-                _ => throw new ResultNotInitializedException(nameof(result))
-            };
-        }
-        """);
-
-        sb.AppendLine($$"""
-        [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(ResultMapExecutor)}}", "1.0.0.0")]
-        public static async Task<Result<R>> Map<{{separatedTemplateArgs}}, R>(this Task<Result<{{resultValueType}}>> resultTask, Func<{{separatedTemplateArgs}}, R> mapping)
-        {
-            var result = await resultTask.ConfigureAwait(false);
-            return result.State switch
-            {
-                ResultState.Success => mapping({{resultValueExpansion}}),
-                ResultState.Error => result.Error!,
-                _ => throw new ResultNotInitializedException(nameof(resultTask))
-            };
-        }
-        """);
-
-        sb.AppendLine($$"""
-        [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(ResultMapExecutor)}}", "1.0.0.0")]
-        public static async Task<Result<R>> Map<{{separatedTemplateArgs}}, R>(this Task<Result<{{resultValueType}}>> resultTask, Func<{{separatedTemplateArgs}}, Task<R>> mapping)
-        {
-            var result = await resultTask.ConfigureAwait(false);
-            return result.State switch
-            {
-                ResultState.Success => await mapping({{resultValueExpansion}}).ConfigureAwait(false),
-                ResultState.Error => result.Error!,
-                _ => throw new ResultNotInitializedException(nameof(resultTask))
-            };
-        }
-        """);
+        GenerateAsyncMethods("Task", sb, templateArgNames, resultTypeDef, resultValueExpansion);
+        GenerateAsyncMethods("ValueTask", sb, templateArgNames, resultTypeDef, resultValueExpansion);
 
         sb.AppendLine("#endregion");
+    }
+
+    private static void GenerateAsyncMethods(string taskType, StringBuilder sb, ImmutableArray<string> templateArgNames, string resultTypeDef, string resultValueExpansion)
+    {
+        var methodTemplateArgNames = templateArgNames.Add("R");
+        string methodTemplateDecl = GenerateTemplateDecl(methodTemplateArgNames);
+        string asyncActionTemplateDecl = GenerateTemplateDecl(templateArgNames.Add($"{taskType}<R>"));
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(ResultMapExecutor)}}", "1.0.0.0")]
+        public static async {{taskType}}<Result<R>> Map{{methodTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, Func{{methodTemplateDecl}} mapping)
+        {
+            var result = await resultTask.ConfigureAwait(false);
+            return result.State switch
+            {
+                ResultState.Success => mapping({{resultValueExpansion}}),
+                ResultState.Error => result.Error!,
+                _ => throw new ResultNotInitializedException(nameof(resultTask))
+            };
+        }
+        """);
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(ResultMapExecutor)}}", "1.0.0.0")]
+        public static async {{taskType}}<Result<R>> Map{{methodTemplateDecl}}(this {{resultTypeDef}} result, Func{{asyncActionTemplateDecl}} mapping)
+        {
+            return result.State switch
+            {
+                ResultState.Success => await mapping({{resultValueExpansion}}).ConfigureAwait(false),
+                ResultState.Error => result.Error!,
+                _ => throw new ResultNotInitializedException(nameof(result))
+            };
+        }
+        """);
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(ResultMapExecutor)}}", "1.0.0.0")]
+        public static async {{taskType}}<Result<R>> Map{{methodTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, Func{{asyncActionTemplateDecl}} mapping)
+        {
+            var result = await resultTask.ConfigureAwait(false);
+            return result.State switch
+            {
+                ResultState.Success => await mapping({{resultValueExpansion}}).ConfigureAwait(false),
+                ResultState.Error => result.Error!,
+                _ => throw new ResultNotInitializedException(nameof(resultTask))
+            };
+        }
+        """);
     }
 }

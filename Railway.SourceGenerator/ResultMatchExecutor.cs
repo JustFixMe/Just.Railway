@@ -16,17 +16,17 @@ internal sealed class ResultMatchExecutor : ResultExtensionsExecutor
         var templateArgNames = Enumerable.Range(1, argCount)
             .Select(i => $"T{i}")
             .ToImmutableArray();
-        string separatedTemplateArgs = string.Join(", ", templateArgNames);
 
-        sb.AppendLine($"#region <{separatedTemplateArgs}>");
-
-        string resultValueType = templateArgNames.Length == 1 ? separatedTemplateArgs : $"({separatedTemplateArgs})";
+        string resultTypeDef = GenerateResultTypeDef(templateArgNames);
         string resultValueExpansion = GenerateResultValueExpansion(templateArgNames);
+        string methodTemplateDecl = GenerateTemplateDecl(templateArgNames.Add("R"));
+
+        sb.AppendLine($"#region {resultTypeDef}");
 
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultMatchExecutor)}}", "1.0.0.0")]
-        public static R Match<{{separatedTemplateArgs}}, R>(this in Result<{{resultValueType}}> result, Func<{{separatedTemplateArgs}}, R> onSuccess, Func<Error, R> onFailure)
+        public static R Match{{methodTemplateDecl}}(this in {{resultTypeDef}} result, Func{{methodTemplateDecl}} onSuccess, Func<Error, R> onFailure)
         {
             return result.State switch
             {
@@ -37,24 +37,22 @@ internal sealed class ResultMatchExecutor : ResultExtensionsExecutor
         }
         """);
 
-        sb.AppendLine($$"""
-        [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(ResultMatchExecutor)}}", "1.0.0.0")]
-        public static Task<R> Match<{{separatedTemplateArgs}}, R>(this in Result<{{resultValueType}}> result, Func<{{separatedTemplateArgs}}, Task<R>> onSuccess, Func<Error, Task<R>> onFailure)
-        {
-            return result.State switch
-            {
-                ResultState.Success => onSuccess({{resultValueExpansion}}),
-                ResultState.Error => onFailure(result.Error!),
-                _ => throw new ResultNotInitializedException(nameof(result))
-            };
-        }
-        """);
+        GenerateAsyncMethods("Task", sb, templateArgNames, resultTypeDef, resultValueExpansion);
+        GenerateAsyncMethods("ValueTask", sb, templateArgNames, resultTypeDef, resultValueExpansion);
+
+        sb.AppendLine("#endregion");
+    }
+
+    private static void GenerateAsyncMethods(string taskType, StringBuilder sb, ImmutableArray<string> templateArgNames, string resultTypeDef, string resultValueExpansion)
+    {
+        var methodTemplateArgNames = templateArgNames.Add("R");
+        string methodTemplateDecl = GenerateTemplateDecl(methodTemplateArgNames);
+        string asyncActionTemplateDecl = GenerateTemplateDecl(templateArgNames.Add($"{taskType}<R>"));
 
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultMatchExecutor)}}", "1.0.0.0")]
-        public static async Task<R> Match<{{separatedTemplateArgs}}, R>(this Task<Result<{{resultValueType}}>> resultTask, Func<{{separatedTemplateArgs}}, R> onSuccess, Func<Error, R> onFailure)
+        public static async {{taskType}}<R> Match{{methodTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, Func{{methodTemplateDecl}} onSuccess, Func<Error, R> onFailure)
         {
             var result = await resultTask.ConfigureAwait(false);
             return result.State switch
@@ -69,7 +67,21 @@ internal sealed class ResultMatchExecutor : ResultExtensionsExecutor
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultMatchExecutor)}}", "1.0.0.0")]
-        public static async Task<R> Match<{{separatedTemplateArgs}}, R>(this Task<Result<{{resultValueType}}>> resultTask, Func<{{separatedTemplateArgs}}, Task<R>> onSuccess, Func<Error, Task<R>> onFailure)
+        public static {{taskType}}<R> Match{{methodTemplateDecl}}(this in {{resultTypeDef}} result, Func{{asyncActionTemplateDecl}} onSuccess, Func<Error, {{taskType}}<R>> onFailure)
+        {
+            return result.State switch
+            {
+                ResultState.Success => onSuccess({{resultValueExpansion}}),
+                ResultState.Error => onFailure(result.Error!),
+                _ => throw new ResultNotInitializedException(nameof(result))
+            };
+        }
+        """);
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(ResultMatchExecutor)}}", "1.0.0.0")]
+        public static async {{taskType}}<R> Match{{methodTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, Func{{asyncActionTemplateDecl}} onSuccess, Func<Error, {{taskType}}<R>> onFailure)
         {
             var result = await resultTask.ConfigureAwait(false);
             var matchTask = result.State switch
@@ -81,7 +93,5 @@ internal sealed class ResultMatchExecutor : ResultExtensionsExecutor
             return await matchTask.ConfigureAwait(false);
         }
         """);
-
-        sb.AppendLine("#endregion");
     }
 }

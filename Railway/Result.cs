@@ -17,13 +17,34 @@ public readonly partial struct Result : IEquatable<Result>
         State = error is null ? ResultState.Success : ResultState.Error;
     }
 
-    [Pure] public static Result Success() => new(null);
-    [Pure] public static Result<T> Success<T>(T value) => new(value);
-    [Pure] public static Result Failure(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
-    [Pure] public static Result<T> Failure<T>(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result Success() => new(null);
 
-    [Pure] public static implicit operator Result(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
-    [Pure] public static implicit operator Result<SuccessUnit>(Result result) => result.State switch
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<T> Success<T>(T value) => new(value);
+
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<(T1, T2)> Success<T1, T2>(T1 value1, T2 value2) => new((value1, value2));
+    
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<(T1, T2, T3)> Success<T1, T2, T3>(T1 value1, T2 value2, T3 value3) => new((value1, value2, value3));
+    
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<(T1, T2, T3, T4)> Success<T1, T2, T3, T4>(T1 value1, T2 value2, T3 value3, T4 value4) => new((value1, value2, value3, value4));
+    
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<(T1, T2, T3, T4, T5)> Success<T1, T2, T3, T4, T5>(T1 value1, T2 value2, T3 value3, T4 value4, T5 value5) => new((value1, value2, value3, value4, value5));
+
+
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result Failure(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<T> Failure<T>(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
+
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Result(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Result<SuccessUnit>(Result result) => result.State switch
     {
         ResultState.Success => new(new SuccessUnit()),
         ResultState.Error => new(result.Error!),

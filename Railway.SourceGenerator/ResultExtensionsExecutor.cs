@@ -31,7 +31,8 @@ internal abstract class ResultExtensionsExecutor : IGeneratorExecutor
     {
         var sb = new StringBuilder();
 
-        for (int i = 1; i <= Constants.MaxResultTupleSize; i++)
+        GenerateHelperMethods(sb);
+        for (int i = 0; i <= Constants.MaxResultTupleSize; i++)
         {
             GenerateMethodsForArgCount(sb, argCount: i);
         }
@@ -39,11 +40,32 @@ internal abstract class ResultExtensionsExecutor : IGeneratorExecutor
         return sb.ToString();
     }
 
-    protected string GenerateResultValueExpansion(ImmutableArray<string> templateArgNames)
+    protected static string GenerateTemplateDecl(ImmutableArray<string> templateArgNames) => templateArgNames.Length > 0
+        ? $"<{string.Join(", ", templateArgNames)}>"
+        : string.Empty;
+
+    protected static string GenerateResultTypeDef(ImmutableArray<string> templateArgNames) => templateArgNames.Length switch
+        {
+            0 => "Result",
+            1 => $"Result<{string.Join(", ", templateArgNames)}>",
+            _ => $"Result<({string.Join(", ", templateArgNames)})>",
+        };
+
+    protected static string GenerateResultValueExpansion(ImmutableArray<string> templateArgNames)
     {
         string resultExpansion;
-        if (templateArgNames.Length > 1)
+
+        switch (templateArgNames.Length)
         {
+            case 0:
+            resultExpansion = string.Empty;
+            break;
+
+            case 1:
+            resultExpansion = "result.Value";
+            break;
+
+            default:
             var resultExpansionBuilder = new StringBuilder();
             for (int i = 1; i <= templateArgNames.Length; i++)
             {
@@ -51,10 +73,7 @@ internal abstract class ResultExtensionsExecutor : IGeneratorExecutor
             }
             resultExpansionBuilder.Remove(resultExpansionBuilder.Length - 2, 2);
             resultExpansion = resultExpansionBuilder.ToString();
-        }
-        else
-        {
-            resultExpansion = "result.Value";
+            break;
         }
 
         return resultExpansion;
@@ -62,4 +81,5 @@ internal abstract class ResultExtensionsExecutor : IGeneratorExecutor
 
     protected abstract string ExtensionType { get; }
     protected abstract void GenerateMethodsForArgCount(StringBuilder sb, int argCount);
+    protected virtual void GenerateHelperMethods(StringBuilder sb) {}
 }

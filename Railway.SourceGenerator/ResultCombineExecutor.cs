@@ -49,10 +49,19 @@ internal sealed class ResultCombineExecutor : IGeneratorExecutor
 
         GenerateGetBottomMethod(sb, argCount);
 
-        var argsResultTupleSizes = new List<ImmutableArray<int>>();
-        Span<int> templateCounts = stackalloc int[argCount];
+        var permutations = 1 << argCount;
+        var argsResultTupleSizes = new ImmutableArray<int>[permutations];
 
-        Permute(templateCounts, argsResultTupleSizes);
+        Span<int> templateCounts = stackalloc int[argCount];
+        for (int i = 0; i < permutations; i++)
+        {
+            templateCounts.Fill(0);
+            for (int j = 0; j < argCount; j++)
+            {
+                templateCounts[j] = (i & (1 << j)) > 0 ? 1 : 0;
+            }
+            argsResultTupleSizes[i] = templateCounts.ToImmutableArray();
+        }
 
         foreach (var argResultTupleSizes in argsResultTupleSizes)
         {
@@ -61,23 +70,6 @@ internal sealed class ResultCombineExecutor : IGeneratorExecutor
 
         sb.AppendLine("#endregion");
 
-        static void Permute(Span<int> templateCounts, ICollection<ImmutableArray<int>> argsResultTupleSizes, int lvl = 0)
-        {
-            int sum = 0;
-            for (int i = 0; i < lvl; i++)
-            {
-                sum += templateCounts[i];
-            }
-            for (templateCounts[lvl] = 0; templateCounts[lvl] <= Constants.MaxResultTupleSize - sum; templateCounts[lvl]++)
-            {
-                if (lvl == templateCounts.Length - 1)
-                {
-                    argsResultTupleSizes.Add(templateCounts.ToImmutableArray());
-                    continue;
-                }
-                Permute(templateCounts, argsResultTupleSizes, lvl + 1);
-            }
-        }
     }
 
     private static void GenerateGetBottomMethod(StringBuilder sb, int argCount)

@@ -14,17 +14,17 @@ internal sealed class ResultTapExecutor : ResultExtensionsExecutor
         var templateArgNames = Enumerable.Range(1, argCount)
             .Select(i => $"T{i}")
             .ToImmutableArray();
-        string separatedTemplateArgs = string.Join(", ", templateArgNames);
 
-        sb.AppendLine($"#region <{separatedTemplateArgs}>");
-
-        string resultValueType = templateArgNames.Length == 1 ? separatedTemplateArgs : $"({separatedTemplateArgs})";
+        string methodTemplateDecl = GenerateTemplateDecl(templateArgNames);
+        string resultTypeDef = GenerateResultTypeDef(templateArgNames);
         string resultValueExpansion = GenerateResultValueExpansion(templateArgNames);
+
+        sb.AppendLine($"#region {resultTypeDef}");
 
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultTapExecutor)}}", "1.0.0.0")]
-        public static ref readonly Result<{{resultValueType}}> Tap<{{separatedTemplateArgs}}>(this in Result<{{resultValueType}}> result, Action<{{separatedTemplateArgs}}>? onSuccess = null, Action<Error>? onFailure = null)
+        public static ref readonly {{resultTypeDef}} Tap{{methodTemplateDecl}}(this in {{resultTypeDef}} result, Action{{methodTemplateDecl}}? onSuccess = null, Action<Error>? onFailure = null)
         {
             switch (result.State)
             {
@@ -41,10 +41,21 @@ internal sealed class ResultTapExecutor : ResultExtensionsExecutor
         }
         """);
 
+        GenerateAsyncMethods("Task", sb, templateArgNames, resultTypeDef, resultValueExpansion);
+        GenerateAsyncMethods("ValueTask", sb, templateArgNames, resultTypeDef, resultValueExpansion);
+
+        sb.AppendLine("#endregion");
+    }
+
+    private static void GenerateAsyncMethods(string taskType, StringBuilder sb, ImmutableArray<string> templateArgNames, string resultTypeDef, string resultValueExpansion)
+    {
+        string methodTemplateDecl = GenerateTemplateDecl(templateArgNames);
+        string asyncActionTemplateDecl = GenerateTemplateDecl(templateArgNames.Add(taskType));
+
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultTapExecutor)}}", "1.0.0.0")]
-        public static async Task<Result<{{resultValueType}}>> Tap<{{separatedTemplateArgs}}>(this Task<Result<{{resultValueType}}>> resultTask, Action<{{separatedTemplateArgs}}>? onSuccess = null, Action<Error>? onFailure = null)
+        public static async {{taskType}}<{{resultTypeDef}}> Tap{{methodTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, Action{{methodTemplateDecl}}? onSuccess = null, Action<Error>? onFailure = null)
         {
             var result = await resultTask.ConfigureAwait(false);
             switch (result.State)
@@ -65,7 +76,7 @@ internal sealed class ResultTapExecutor : ResultExtensionsExecutor
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultTapExecutor)}}", "1.0.0.0")]
-        public static async Task<Result<{{resultValueType}}>> Tap<{{separatedTemplateArgs}}>(this Result<{{resultValueType}}> result, Func<{{separatedTemplateArgs}}, Task>? onSuccess = null, Func<Error, Task>? onFailure = null)
+        public static async {{taskType}}<{{resultTypeDef}}> Tap{{methodTemplateDecl}}(this {{resultTypeDef}} result, Func{{asyncActionTemplateDecl}}? onSuccess = null, Func<Error, {{taskType}}>? onFailure = null)
         {
             switch (result.State)
             {
@@ -87,7 +98,7 @@ internal sealed class ResultTapExecutor : ResultExtensionsExecutor
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultTapExecutor)}}", "1.0.0.0")]
-        public static async Task<Result<{{resultValueType}}>> Tap<{{separatedTemplateArgs}}>(this Task<Result<{{resultValueType}}>> resultTask, Func<{{separatedTemplateArgs}}, Task>? onSuccess = null, Func<Error, Task>? onFailure = null)
+        public static async {{taskType}}<{{resultTypeDef}}> Tap{{methodTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, Func{{asyncActionTemplateDecl}}? onSuccess = null, Func<Error, {{taskType}}>? onFailure = null)
         {
             var result = await resultTask.ConfigureAwait(false);
             switch (result.State)
@@ -106,7 +117,5 @@ internal sealed class ResultTapExecutor : ResultExtensionsExecutor
             return result;
         }
         """);
-
-        sb.AppendLine("#endregion");
     }
 }

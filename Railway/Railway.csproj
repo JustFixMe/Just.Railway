@@ -8,6 +8,7 @@
     <RootNamespace>Just.Railway</RootNamespace>
     
     <Authors>JustFixMe</Authors>
+    <Copyright>Copyright (c) 2023 JustFixMe</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://gitea.jstdev.ru/just/Just.Railway/</RepositoryUrl>
     

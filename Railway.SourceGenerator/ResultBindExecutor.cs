@@ -14,17 +14,18 @@ internal sealed class ResultBindExecutor : ResultExtensionsExecutor
         var templateArgNames = Enumerable.Range(1, argCount)
             .Select(i => $"T{i}")
             .ToImmutableArray();
-        string separatedTemplateArgs = string.Join(", ", templateArgNames);
 
-        sb.AppendLine($"#region <{separatedTemplateArgs}>");
-
-        string resultValueType = templateArgNames.Length == 1 ? separatedTemplateArgs : $"({separatedTemplateArgs})";
+        string resultTypeDef = GenerateResultTypeDef(templateArgNames);
         string resultValueExpansion = GenerateResultValueExpansion(templateArgNames);
+        string methodTemplateDecl = GenerateTemplateDecl(templateArgNames.Add("R"));
+        string bindTemplateDecl = GenerateTemplateDecl(templateArgNames.Add("Result<R>"));
+
+        sb.AppendLine($"#region {resultTypeDef}");
 
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultBindExecutor)}}", "1.0.0.0")]
-        public static Result<R> Bind<{{separatedTemplateArgs}}, R>(this in Result<{{resultValueType}}> result, Func<{{separatedTemplateArgs}}, Result<R>> binding)
+        public static Result<R> Bind{{methodTemplateDecl}}(this in {{resultTypeDef}} result, Func{{bindTemplateDecl}} binding)
         {
             return result.State switch
             {
@@ -35,24 +36,22 @@ internal sealed class ResultBindExecutor : ResultExtensionsExecutor
         }
         """);
 
-        sb.AppendLine($$"""
-        [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(ResultBindExecutor)}}", "1.0.0.0")]
-        public static Task<Result<R>> Bind<{{separatedTemplateArgs}}, R>(this in Result<{{resultValueType}}> result, Func<{{separatedTemplateArgs}}, Task<Result<R>>> binding)
-        {
-            return result.State switch
-            {
-                ResultState.Success => binding({{resultValueExpansion}}),
-                ResultState.Error => Task.FromResult<Result<R>>(result.Error!),
-                _ => throw new ResultNotInitializedException(nameof(result))
-            };
-        }
-        """);
+        GenerateAsyncMethods("Task", sb, templateArgNames, resultTypeDef, resultValueExpansion);
+        GenerateAsyncMethods("ValueTask", sb, templateArgNames, resultTypeDef, resultValueExpansion);
+
+        sb.AppendLine("#endregion");
+    }
+
+    private static void GenerateAsyncMethods(string taskType, StringBuilder sb, ImmutableArray<string> templateArgNames, string resultTypeDef, string resultValueExpansion)
+    {
+        string methodTemplateDecl = GenerateTemplateDecl(templateArgNames.Add("R"));
+        string bindTemplateDecl = GenerateTemplateDecl(templateArgNames.Add("Result<R>"));
+        string asyncActionTemplateDecl = GenerateTemplateDecl(templateArgNames.Add($"{taskType}<Result<R>>"));
 
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultBindExecutor)}}", "1.0.0.0")]
-        public static async Task<Result<R>> Bind<{{separatedTemplateArgs}}, R>(this Task<Result<{{resultValueType}}>> resultTask, Func<{{separatedTemplateArgs}}, Result<R>> binding)
+        public static async {{taskType}}<Result<R>> Bind{{methodTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, Func{{bindTemplateDecl}} binding)
         {
             var result = await resultTask.ConfigureAwait(false);
             return result.State switch
@@ -67,7 +66,21 @@ internal sealed class ResultBindExecutor : ResultExtensionsExecutor
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultBindExecutor)}}", "1.0.0.0")]
-        public static async Task<Result<R>> Bind<{{separatedTemplateArgs}}, R>(this Task<Result<{{resultValueType}}>> resultTask, Func<{{separatedTemplateArgs}}, Task<Result<R>>> binding)
+        public static {{taskType}}<Result<R>> Bind{{methodTemplateDecl}}(this in {{resultTypeDef}} result, Func{{asyncActionTemplateDecl}} binding)
+        {
+            return result.State switch
+            {
+                ResultState.Success => binding({{resultValueExpansion}}),
+                ResultState.Error => {{taskType}}.FromResult<Result<R>>(result.Error!),
+                _ => throw new ResultNotInitializedException(nameof(result))
+            };
+        }
+        """);
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(ResultBindExecutor)}}", "1.0.0.0")]
+        public static async {{taskType}}<Result<R>> Bind{{methodTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, Func{{asyncActionTemplateDecl}} binding)
         {
             var result = await resultTask.ConfigureAwait(false);
             return result.State switch
@@ -78,7 +91,5 @@ internal sealed class ResultBindExecutor : ResultExtensionsExecutor
             };
         }
         """);
-
-        sb.AppendLine("#endregion");
     }
 }

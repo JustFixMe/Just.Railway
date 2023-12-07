@@ -38,8 +38,15 @@ public readonly partial struct Result : IEquatable<Result>
 
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result Failure(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
+
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result Failure(Exception exception) => new(Error.New(exception) ?? throw new ArgumentNullException(nameof(exception)));
+
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> Failure<T>(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
+
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<T> Failure<T>(Exception exception) => new(Error.New(exception) ?? throw new ArgumentNullException(nameof(exception)));
 
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator Result(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
@@ -54,6 +61,23 @@ public readonly partial struct Result : IEquatable<Result>
     [Pure] public bool IsSuccess => Error is null;
     [Pure] public bool IsFailure => Error is not null;
 
+    [Pure] public bool Success([MaybeNullWhen(false)]out SuccessUnit? u, [MaybeNullWhen(true), NotNullWhen(false)]out Error? error)
+    {
+        switch (State)
+        {
+            case ResultState.Success:
+                u = new SuccessUnit();
+                error = default;
+                return true;
+
+            case ResultState.Error:
+                u = default;
+                error = Error!;
+                return false;
+
+            default: throw new ResultNotInitializedException();
+        }
+    }
     [Pure] public bool TryGetError([MaybeNullWhen(false)]out Error error)
     {
         if (IsSuccess)
@@ -125,7 +149,7 @@ public readonly struct Result<T> : IEquatable<Result<T>>
     [Pure] public bool IsSuccess => State == ResultState.Success;
     [Pure] public bool IsFailure => State == ResultState.Error;
 
-    [Pure] public bool Unwrap([MaybeNullWhen(false)]out T value, [MaybeNullWhen(true)]out Error error)
+    [Pure] public bool Success([MaybeNullWhen(false)]out T value, [MaybeNullWhen(true), NotNullWhen(false)]out Error? error)
     {
         switch (State)
         {

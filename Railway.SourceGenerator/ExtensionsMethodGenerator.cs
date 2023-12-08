@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis;
 namespace Just.Railway.SourceGen;
 
 [Generator]
-public class ResultMethodGenerator : IIncrementalGenerator
+public class ExtensionsMethodGenerator : IIncrementalGenerator
 {
     private readonly IEnumerable<IGeneratorExecutor> _executors = new IGeneratorExecutor[]
     {
@@ -18,6 +18,7 @@ public class ResultMethodGenerator : IIncrementalGenerator
         new ResultBindExecutor(),
         new ResultTapExecutor(),
         new ResultAppendExecutor(),
+        new TryExtensionsExecutor(),
     };
 
     public void Initialize(IncrementalGeneratorInitializationContext context)

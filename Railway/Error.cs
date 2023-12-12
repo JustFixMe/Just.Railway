@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Immutable;
 using System.Runtime.Serialization;
 using System.Text;
 
@@ -10,8 +11,6 @@ namespace Just.Railway;
 [JsonDerivedType(typeof(ManyErrors))]
 public abstract class Error : IEquatable<Error>, IComparable<Error>
 {
-    private IDictionary<string, object>? _extensionData;
-
     protected internal Error(){}
 
     /// <summary>
@@ -77,28 +76,8 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
 
     [Pure] public abstract string Type { get; }
     [Pure] public abstract string Message { get; }
-    [Pure, JsonExtensionData] public IDictionary<string, object> ExtensionData
-    {
-        get => _extensionData ??= new Dictionary<string, object>();
-        init => _extensionData = value ?? new Dictionary<string, object>();
-    }
-    [Pure] public object? this[string name]
-    {
-        get => _extensionData?.TryGetValue(name, out var val) == true ? val : null;
-
-        set
-        {
-            if (value is null)
-            {
-                _extensionData?.Remove(name);
-            }
-            else
-            {
-                _extensionData ??= new Dictionary<string, object>();
-                _extensionData[name] = value;
-            }
-        }
-    }
+    [Pure, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public ImmutableDictionary<string, string>? ExtensionData { get; init; }
+    [Pure] public string? this[string key] => ExtensionData?.TryGetValue(key, out var value) == true ? value : null;
 
     [Pure, JsonIgnore] public abstract int Count { get; }
     [Pure, JsonIgnore] public abstract bool IsEmpty { get; }
@@ -199,13 +178,13 @@ public sealed class ExceptionalError : Error
         : this(exception.GetType().Name, exception.Message)
     {
         Exception = exception;
-        FillExtensionData(exception);
+        ExtensionData = ExtractExtensionData(exception);
     }
     internal ExceptionalError(string message, Exception exception)
         : this(exception.GetType().Name, message)
     {
         Exception = exception;
-        FillExtensionData(exception);
+        ExtensionData = ExtractExtensionData(exception);
     }
 
     [JsonConstructor]
@@ -231,15 +210,28 @@ public sealed class ExceptionalError : Error
         yield return this;
     }
 
-    private void FillExtensionData(Exception exception)
+    private static ImmutableDictionary<string, string>? ExtractExtensionData(Exception exception)
     {
+        if (!(exception.Data?.Count > 0))
+        return null;
+
+        List<KeyValuePair<string, string>>? values = null;
+
         foreach (var key in exception.Data.Keys)
         {
+            if (key is null) continue;
+
             var value = exception.Data[key];
-            if (key is null || value is null)
-                continue;
-            this.ExtensionData[key.ToString() ?? string.Empty] = value;
+            if (value is null) continue;
+
+            var keyString = key.ToString();
+            var valueString = value.ToString();
+            if (string.IsNullOrEmpty(keyString) || string.IsNullOrEmpty(valueString)) continue;
+
+            values ??= [];
+            values.Add(new(keyString, valueString));
         }
+        return values?.ToImmutableDictionary();
     }
 }
 

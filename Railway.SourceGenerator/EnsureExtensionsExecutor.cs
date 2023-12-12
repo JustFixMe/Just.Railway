@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Just.Railway.SourceGen;
 
-public sealed class EnsureExtensionExecutor : IGeneratorExecutor
+public sealed class EnsureExtensionsExecutor : IGeneratorExecutor
 {
     public void Execute(SourceProductionContext context, Compilation source)
     {
@@ -80,7 +80,7 @@ public sealed class EnsureExtensionExecutor : IGeneratorExecutor
 
         typeOverloads.ForEach(def => sb.AppendLine($$"""
         [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(EnsureExtensionExecutor)}}", "1.0.0.0")]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
         public static Ensure<{{def.CollectionType}}> NotEmpty{{def.TemplateDef}}(this in Ensure<{{def.CollectionType}}> ensure, {{errorParameterDecl}})
         {
             return ensure.State switch
@@ -101,7 +101,7 @@ public sealed class EnsureExtensionExecutor : IGeneratorExecutor
 
         sb.AppendLine($$"""
         [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(EnsureExtensionExecutor)}}", "1.0.0.0")]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
         public static Ensure<T> NotNull<T>(this in Ensure<T?> ensure, {{errorParameterDecl}})
             where T : struct
         {
@@ -117,7 +117,7 @@ public sealed class EnsureExtensionExecutor : IGeneratorExecutor
         """);
         sb.AppendLine($$"""
         [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(EnsureExtensionExecutor)}}", "1.0.0.0")]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
         public static Ensure<T> NotNull<T>(this in Ensure<T?> ensure, {{errorParameterDecl}})
             where T : notnull
         {
@@ -138,7 +138,7 @@ public sealed class EnsureExtensionExecutor : IGeneratorExecutor
         string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} does not satisfy the requirement.\")";
         sb.AppendLine($$"""
         [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(EnsureExtensionExecutor)}}", "1.0.0.0")]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
         public static Ensure<T> Satisfies<T>(this in Ensure<T> ensure, Func<T, bool> requirement, {{errorParameterDecl}})
         {
             return ensure.State switch
@@ -160,7 +160,7 @@ public sealed class EnsureExtensionExecutor : IGeneratorExecutor
     {
         sb.AppendLine($$"""
         [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(EnsureExtensionExecutor)}}", "1.0.0.0")]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
         public static async {{taskType}}<Ensure<T>> Satisfies<T>(this {{taskType}}<Ensure<T>> ensureTask, Func<T, bool> requirement, {{errorParameterDecl}})
         {
             var ensure = await ensureTask.ConfigureAwait(false);
@@ -176,7 +176,7 @@ public sealed class EnsureExtensionExecutor : IGeneratorExecutor
         """);
         sb.AppendLine($$"""
         [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(EnsureExtensionExecutor)}}", "1.0.0.0")]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
         public static async {{taskType}}<Ensure<T>> Satisfies<T>(this Ensure<T> ensure, Func<T, {{taskType}}<bool>> requirement, {{errorParameterDecl}})
         {
             return ensure.State switch
@@ -191,7 +191,7 @@ public sealed class EnsureExtensionExecutor : IGeneratorExecutor
         """);
         sb.AppendLine($$"""
         [PureAttribute]
-        [GeneratedCodeAttribute("{{nameof(EnsureExtensionExecutor)}}", "1.0.0.0")]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
         public static async {{taskType}}<Ensure<T>> Satisfies<T>(this {{taskType}}<Ensure<T>> ensureTask, Func<T, {{taskType}}<bool>> requirement, {{errorParameterDecl}})
         {
             var ensure = await ensureTask.ConfigureAwait(false);

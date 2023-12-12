@@ -203,6 +203,48 @@ internal sealed class ResultAppendExecutor : ResultExtensionsExecutor
         sb.AppendLine($$"""
         [PureAttribute]
         [GeneratedCodeAttribute("{{nameof(ResultAppendExecutor)}}", "1.0.0.0")]
+        public static async {{taskType}}<{{resultExpandedTypeDef}}> Append{{methodExpandedTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, TNext next)
+        {
+            var result = await resultTask.ConfigureAwait(false);
+            return result.State switch
+            {
+                ResultState.Success => Result.Success({{JoinArguments(resultValueExpansion, "next")}}),
+                ResultState.Error => result.Error!,
+                _ => throw new ResultNotInitializedException(nameof(result))
+            };
+        }
+        """);
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(ResultAppendExecutor)}}", "1.0.0.0")]
+        public static async {{taskType}}<{{resultExpandedTypeDef}}> Append{{methodExpandedTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, Result<TNext> next)
+        {
+            var result = await resultTask.ConfigureAwait(false);
+            if ((result.State & next.State) == ResultState.Bottom)
+            {
+                throw new ResultNotInitializedException(string.Join(';', GetBottom(result.State, next.State)));
+            }
+
+            Error? error = null;
+            if (result.IsFailure)
+            {
+                error += result.Error;
+            }
+            if (next.IsFailure)
+            {
+                error += next.Error;
+            }
+
+            return error is null
+                ? Result.Success({{JoinArguments(resultValueExpansion, "next.Value")}})
+                : error;
+        }
+        """);
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(ResultAppendExecutor)}}", "1.0.0.0")]
         public static async {{taskType}}<{{resultExpandedTypeDef}}> Append{{methodExpandedTemplateDecl}}(this {{taskType}}<{{resultTypeDef}}> resultTask, Func<TNext> nextFunc)
         {
             var result = await resultTask.ConfigureAwait(false);

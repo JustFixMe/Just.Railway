@@ -19,7 +19,7 @@ public class ExtensionsMethodGenerator : IIncrementalGenerator
         new ResultTapExecutor(),
         new ResultAppendExecutor(),
         new TryExtensionsExecutor(),
-        new EnsureExtensionExecutor(),
+        new EnsureExtensionsExecutor(),
     };
 
     public void Initialize(IncrementalGeneratorInitializationContext context)

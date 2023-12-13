@@ -1,5 +1,3 @@
-using System.Collections.Immutable;
-
 namespace Railway.Tests.Errors;
 
 public class Serialization
@@ -8,35 +6,64 @@ public class Serialization
     public void WhenSerializingManyErrors()
     {
         // Given
-        Error many_errors = new ManyErrors(new Error[]{
-            new ExpectedError("err1", "msg1"){
-                ExtensionData = ImmutableDictionary<string, string>.Empty
-                    .Add("ext", "ext_value"),
-            },
-            new ExceptionalError(new Exception("msg2")),
-        });
+        Error many_errors = new ManyErrors(
+        [
+            Error.New("err1", "msg1", new KeyValuePair<string, string>[]
+            {
+                new("ext", "ext_value"),
+            }),
+            Error.New(new Exception("msg2")),
+        ]);
         // When
         var result = JsonSerializer.Serialize(many_errors);
         // Then
         Assert.Equal(
-            expected: "[{\"$$err\":0,\"Type\":\"err1\",\"Message\":\"msg1\",\"ExtensionData\":{\"ext\":\"ext_value\"}},{\"$$err\":1,\"Type\":\"Exception\",\"Message\":\"msg2\"}]",
+            expected: "[{\"type\":\"err1\",\"msg\":\"msg1\",\"ext\":\"ext_value\"},{\"type\":\"System.Exception\",\"msg\":\"msg2\"}]",
             result);
     }
 
     [Fact]
-    public void WhenDeserializingManyErrors()
+    public void WhenDeserializingManyErrorsAsError()
     {
         // Given
-        var json = "[{\"$$err\":0,\"Type\":\"err1\",\"Message\":\"msg1\",\"ExtensionData\":{\"ext1\":\"ext_value1\",\"ext2\":\"ext_value2\"}},{\"$$err\":1,\"Type\":\"Exception\",\"Message\":\"msg2\"}]";
+        var json = "[{\"type\":\"err1\",\"msg\":\"msg1\",\"ext1\":\"ext_value1\",\"ext2\":\"ext_value2\"},{\"type\":\"System.Exception\",\"msg\":\"msg2\"}]";
         // When
-        var result = JsonSerializer.Deserialize<Error[]>(json);
+        var result = JsonSerializer.Deserialize<Error>(json);
         // Then
-        Assert.True(result?.Length == 2);
+        Assert.IsType<ManyErrors>(result);
+        ManyErrors manyErrors = (ManyErrors)result;
+
+        Assert.True(manyErrors.Count == 2);
         Assert.Equal(
-            expected: new ManyErrors(new Error[]{
-                new ExpectedError("err1", "msg1"),
-                new ExceptionalError(new Exception("msg2")),
-            }),
+            expected: Error.Many(
+                Error.New("err1", "msg1"),
+                Error.New(new Exception("msg2"))
+            ).ToEnumerable(),
+            manyErrors
+        );
+        Assert.Equal(
+            expected: "ext_value1",
+            manyErrors[0]["ext1"]);
+        Assert.Equal(
+            expected: "ext_value2",
+            manyErrors[0]["ext2"]);
+    }
+
+    [Fact]
+    public void WhenDeserializingManyErrorsAsManyErrors()
+    {
+        // Given
+        var json = "[{\"type\":\"err1\",\"msg\":\"msg1\",\"ext1\":\"ext_value1\",\"ext2\":\"ext_value2\"},{\"type\":\"System.Exception\",\"msg\":\"msg2\"}]";
+        // When
+        var result = JsonSerializer.Deserialize<ManyErrors>(json);
+        // Then
+        Assert.NotNull(result);
+        Assert.True(result.Count == 2);
+        Assert.Equal(
+            expected: Error.Many(
+                Error.New("err1", "msg1"),
+                Error.New(new Exception("msg2"))
+            ).ToEnumerable(),
             result
         );
         Assert.Equal(

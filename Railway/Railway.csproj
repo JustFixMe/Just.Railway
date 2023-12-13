@@ -7,10 +7,11 @@
     <AssemblyName>Just.Railway</AssemblyName>
     <RootNamespace>Just.Railway</RootNamespace>
     
+    <Description>Base for railway-oriented programming in .NET. Package includes Result object, Error class and most of the common extensions.</Description>
+    <PackageTags>railway-oriented;functional;result-pattern;result-object;error-handling</PackageTags>
     <Authors>JustFixMe</Authors>
     <Copyright>Copyright (c) 2023 JustFixMe</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://gitea.jstdev.ru/just/Just.Railway/</RepositoryUrl>
     
     <EmitCompilerGeneratedFiles Condition="'$(Configuration)'=='Debug'">true</EmitCompilerGeneratedFiles>
     <ReleaseVersion Condition=" '$(ReleaseVersion)' == '' ">1.0.0</ReleaseVersion>

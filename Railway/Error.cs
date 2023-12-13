@@ -1,14 +1,10 @@
 using System.Collections;
 using System.Collections.Immutable;
-using System.Runtime.Serialization;
 using System.Text;
 
 namespace Just.Railway;
 
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "$$err")]
-[JsonDerivedType(typeof(ExpectedError), typeDiscriminator: 0)]
-[JsonDerivedType(typeof(ExceptionalError), typeDiscriminator: 1)]
-[JsonDerivedType(typeof(ManyErrors))]
+[JsonConverter(typeof(ErrorJsonConverter))]
 public abstract class Error : IEquatable<Error>, IComparable<Error>
 {
     protected internal Error(){}
@@ -33,16 +29,22 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
     /// </summary>
     /// <param name="message">Error detail</param>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Error New(string message) =>
-        new ExpectedError("error", message);
+    public static Error New(string message, IEnumerable<KeyValuePair<string, string>>? extensionData = null) =>
+        new ExpectedError("error", message)
+        {
+            ExtensionData = extensionData?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty
+        };
     /// <summary>
     /// Create an <see cref="ExpectedError"/>
     /// </summary>
     /// <param name="type">Error code</param>
     /// <param name="message">Error detail</param>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Error New(string type, string message) =>
-        new ExpectedError(type, message);
+    public static Error New(string type, string message, IEnumerable<KeyValuePair<string, string>>? extensionData = null) =>
+        new ExpectedError(type, message)
+        {
+            ExtensionData = extensionData?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty
+        };
     /// <summary>
     /// Create a <see cref="ManyErrors"/>
     /// </summary>
@@ -50,7 +52,7 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Many(Error error1, Error error2) => (error1, error2) switch
     {
-        (null, null) => new ManyErrors(Enumerable.Empty<Error>()),
+        (null, null) => new ManyErrors([]),
         (Error err, null) => err,
         (Error err, { IsEmpty: true }) => err,
         (null, Error err) => err,
@@ -76,13 +78,14 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
 
     [Pure] public abstract string Type { get; }
     [Pure] public abstract string Message { get; }
-    [Pure, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public ImmutableDictionary<string, string>? ExtensionData { get; init; }
-    [Pure] public string? this[string key] => ExtensionData?.TryGetValue(key, out var value) == true ? value : null;
 
-    [Pure, JsonIgnore] public abstract int Count { get; }
-    [Pure, JsonIgnore] public abstract bool IsEmpty { get; }
-    [Pure, JsonIgnore] public abstract bool IsExpected { get; }
-    [Pure, JsonIgnore] public abstract bool IsExeptional { get; }
+    [Pure] public ImmutableDictionary<string, string> ExtensionData { get; internal init; } = ImmutableDictionary<string, string>.Empty;
+    [Pure] public string? this[string key] => ExtensionData.TryGetValue(key, out var value) == true ? value : null;
+
+    [Pure] public abstract int Count { get; }
+    [Pure] public abstract bool IsEmpty { get; }
+    [Pure] public abstract bool IsExpected { get; }
+    [Pure] public abstract bool IsExeptional { get; }
 
     [Pure] public Error Append(Error? next)
     {
@@ -142,9 +145,9 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
     }
 }
 
+[JsonConverter(typeof(ExpectedErrorJsonConverter))]
 public sealed class ExpectedError : Error
 {
-    [JsonConstructor]
     public ExpectedError(string type, string message)
     {
         Type = type;
@@ -158,10 +161,10 @@ public sealed class ExpectedError : Error
     [Pure] public override string Type { get; }
     [Pure] public override string Message { get; }
 
-    [Pure, JsonIgnore] public override int Count => 1;
-    [Pure, JsonIgnore] public override bool IsEmpty => false;
-    [Pure, JsonIgnore] public override bool IsExpected => true;
-    [Pure, JsonIgnore] public override bool IsExeptional => false;
+    [Pure] public override int Count => 1;
+    [Pure] public override bool IsEmpty => false;
+    [Pure] public override bool IsExpected => true;
+    [Pure] public override bool IsExeptional => false;
 
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override IEnumerable<Error> ToEnumerable()
@@ -170,24 +173,24 @@ public sealed class ExpectedError : Error
     }
 }
 
+[JsonConverter(typeof(ExceptionalErrorJsonConverter))]
 public sealed class ExceptionalError : Error
 {
     internal readonly Exception? Exception;
 
     internal ExceptionalError(Exception exception)
-        : this(exception.GetType().Name, exception.Message)
+        : this(exception.GetType().FullName ?? exception.GetType().Name, exception.Message)
     {
         Exception = exception;
         ExtensionData = ExtractExtensionData(exception);
     }
     internal ExceptionalError(string message, Exception exception)
-        : this(exception.GetType().Name, message)
+        : this(exception.GetType().FullName ?? exception.GetType().Name, message)
     {
         Exception = exception;
         ExtensionData = ExtractExtensionData(exception);
     }
 
-    [JsonConstructor]
     public ExceptionalError(string type, string message)
     {
         Type = type;
@@ -197,10 +200,10 @@ public sealed class ExceptionalError : Error
     [Pure] public override string Type { get; }
     [Pure] public override string Message { get; }
 
-    [Pure, JsonIgnore] public override int Count => 1;
-    [Pure, JsonIgnore] public override bool IsEmpty => false;
-    [Pure, JsonIgnore] public override bool IsExpected => false;
-    [Pure, JsonIgnore] public override bool IsExeptional => true;
+    [Pure] public override int Count => 1;
+    [Pure] public override bool IsEmpty => false;
+    [Pure] public override bool IsExpected => false;
+    [Pure] public override bool IsExeptional => true;
 
     [Pure] public override Exception ToException() => Exception ?? base.ToException();
 
@@ -210,10 +213,10 @@ public sealed class ExceptionalError : Error
         yield return this;
     }
 
-    private static ImmutableDictionary<string, string>? ExtractExtensionData(Exception exception)
+    private static ImmutableDictionary<string, string> ExtractExtensionData(Exception exception)
     {
         if (!(exception.Data?.Count > 0))
-        return null;
+        return ImmutableDictionary<string, string>.Empty;
 
         List<KeyValuePair<string, string>>? values = null;
 
@@ -231,16 +234,17 @@ public sealed class ExceptionalError : Error
             values ??= [];
             values.Add(new(keyString, valueString));
         }
-        return values?.ToImmutableDictionary();
+        return values?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty;
     }
 }
 
-[DataContract]
-public sealed class ManyErrors : Error, IEnumerable<Error>
+[JsonConverter(typeof(ManyErrorsJsonConverter))]
+public sealed class ManyErrors : Error, IEnumerable<Error>, IReadOnlyList<Error>
 {
     private readonly List<Error> _errors;
-    [Pure, DataMember] public IEnumerable<Error> Errors { get => _errors; }
+    [Pure] public IEnumerable<Error> Errors { get => _errors; }
 
+    internal ManyErrors(List<Error> errors) => _errors = errors;
     internal ManyErrors(Error head, Error tail)
     {
         _errors = new List<Error>(head.Count + tail.Count);
@@ -283,9 +287,11 @@ public sealed class ManyErrors : Error, IEnumerable<Error>
     }
 
     [Pure] public override int Count => _errors.Count;
-    [Pure, JsonIgnore] public override bool IsEmpty => _errors.Count == 0;
-    [Pure, JsonIgnore] public override bool IsExpected => _errors.All(static x => x.IsExpected);
-    [Pure, JsonIgnore] public override bool IsExeptional => _errors.Any(static x => x.IsExeptional);
+    [Pure] public override bool IsEmpty => _errors.Count == 0;
+    [Pure] public override bool IsExpected => _errors.All(static x => x.IsExpected);
+    [Pure] public override bool IsExeptional => _errors.Any(static x => x.IsExeptional);
+
+    [Pure] public Error this[int index] => _errors[index];
 
     [Pure] public override Exception ToException() => new AggregateException(_errors.Select(static x => x.ToException()));
     [Pure] public override IEnumerable<Error> ToEnumerable() => _errors;

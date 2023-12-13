@@ -12,6 +12,7 @@
     <Authors>JustFixMe</Authors>
     <Copyright>Copyright (c) 2023 JustFixMe</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/JustFixMe/Just.Railway/</RepositoryUrl>
     
     <EmitCompilerGeneratedFiles Condition="'$(Configuration)'=='Debug'">true</EmitCompilerGeneratedFiles>
     <ReleaseVersion Condition=" '$(ReleaseVersion)' == '' ">1.0.0</ReleaseVersion>

@@ -14,7 +14,7 @@ The desire is to make somewhat user-friendly experience while using result-objec
 
 ## Getting Started
 
-### Install from local Gitea package repository
+### Install from NuGet.org
 
 ```sh
 # install the package using NuGet

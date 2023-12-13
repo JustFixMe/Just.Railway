@@ -35,4 +35,4 @@ jobs:
       run: dotnet nuget push --source gitea_registry --api-key ${{ secrets.LOCAL_NUGET_PACKAGE_TOKEN }} nupkgs/*.nupkg
 
     - name: Publish the package to NuGet.org
-      run: dotnet nuget push --api-key ${{ secrets.NUGET_PACKAGE_TOKEN }} nupkgs/*.nupkg
+      run: dotnet nuget push --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_PACKAGE_TOKEN }} nupkgs/*.nupkg

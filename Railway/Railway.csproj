@@ -11,7 +11,9 @@
     <PackageTags>railway-oriented;functional;result-pattern;result-object;error-handling</PackageTags>
     <Authors>JustFixMe</Authors>
     <Copyright>Copyright (c) 2023 JustFixMe</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
     <RepositoryUrl>https://github.com/JustFixMe/Just.Railway/</RepositoryUrl>
     
     <EmitCompilerGeneratedFiles Condition="'$(Configuration)'=='Debug'">true</EmitCompilerGeneratedFiles>
@@ -24,6 +26,11 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath=""/>
+    <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath=""/>
   </ItemGroup>
 
   <ItemGroup>

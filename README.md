@@ -17,10 +17,8 @@ The desire is to make somewhat user-friendly experience while using result-objec
 ### Install from local Gitea package repository
 
 ```sh
-# Setup NuGet registry from the command line
-dotnet nuget add source --name gitea_jstdev https://gitea.jstdev.ru/api/packages/just/nuget/index.json
-# then install the package using NuGet
-dotnet add package --source gitea_jstdev Just.Railway
+# install the package using NuGet
+dotnet add package Just.Railway
 ```
 
 ## Examples

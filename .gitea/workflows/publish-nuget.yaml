@@ -29,7 +29,7 @@ jobs:
         RELEASE_VERSION: ${{ gitea.ref_name }}
       run: >
         dotnet pack --no-restore --configuration Release --output nupkgs Railway/Railway.csproj
-        /p:RepositoryUrl ${{ gitea.server_url }}/${{ gitea.repository }}/
+        /p:RepositoryUrl=${{ gitea.server_url }}/${{ gitea.repository }}/
         `echo $RELEASE_VERSION | sed -E 's|^(v([0-9]+(\.[0-9]+){2}))(-([a-z0-9]+)){1}|/p:ReleaseVersion=\2 /p:VersionSuffix=\5|; s|^(v([0-9]+(\.[0-9]+){2}))$|/p:ReleaseVersion=\2|'`
 
     - name: Publish the package to Gitea

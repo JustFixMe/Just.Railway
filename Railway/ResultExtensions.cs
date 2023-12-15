@@ -89,7 +89,7 @@ public static partial class ResultExtensions
             {
                 case ResultState.Error:
                     hasErrors = true;
-                    errors ??= [];
+                    errors ??= new(4);
                     errors.Add(result.Error!);
                     break;
 
@@ -123,13 +123,13 @@ public static partial class ResultExtensions
             {
                 case ResultState.Error:
                     hasErrors = true;
-                    errors ??= [];
+                    errors ??= new(4);
                     errors.Add(result.Error!);
                     break;
 
                 case ResultState.Success:
                     if (hasErrors) goto afterLoop;
-                    values ??= [];
+                    values ??= new(4);
                     values.Add(result.Value);
                     break;
                     

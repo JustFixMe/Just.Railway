@@ -52,7 +52,7 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Many(Error error1, Error error2) => (error1, error2) switch
     {
-        (null, null) => new ManyErrors([]),
+        (null, null) => new ManyErrors(new List<Error>()),
         (Error err, null) => err,
         (Error err, { IsEmpty: true }) => err,
         (null, Error err) => err,
@@ -231,7 +231,7 @@ public sealed class ExceptionalError : Error
             var valueString = value.ToString();
             if (string.IsNullOrEmpty(keyString) || string.IsNullOrEmpty(valueString)) continue;
 
-            values ??= [];
+            values ??= new List<KeyValuePair<string, string>>(4);
             values.Add(new(keyString, valueString));
         }
         return values?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty;
@@ -377,7 +377,11 @@ public sealed class ManyErrors : Error, IEnumerable<Error>, IReadOnlyList<Error>
 }
 
 [Serializable]
-public sealed class ErrorException(string type, string message) : Exception(message)
+public sealed class ErrorException : Exception
 {
-    public string Type { get; } = type ?? nameof(ErrorException);
+    public ErrorException(string type, string message) : base(message)
+    {
+        Type = type ?? nameof(ErrorException);
+    }
+    public string Type { get; }
 }

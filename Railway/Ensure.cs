@@ -60,6 +60,7 @@ public readonly struct Ensure<T>
         Value = value;
         ValueExpression = valueExpression;
         State = ResultState.Success;
+        Error = default;
     }
 
     internal Ensure(Error error, string valueExpression)
@@ -72,7 +73,12 @@ public readonly struct Ensure<T>
 }
 
 [Serializable]
-public class EnsureNotInitializedException(string variableName = "this") : InvalidOperationException("Ensure was not properly initialized.")
+public class EnsureNotInitializedException : InvalidOperationException
 {
-    public string VariableName { get; } = variableName;
+    public EnsureNotInitializedException(string variableName = "this")
+        : base("Ensure was not properly initialized.")
+    {
+        VariableName = variableName;
+    }
+    public string VariableName { get; }
 }

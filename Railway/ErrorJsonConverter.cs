@@ -35,7 +35,7 @@ public sealed class ErrorJsonConverter : JsonConverter<Error>
 
     internal static ManyErrors ReadMany(ref Utf8JsonReader reader)
     {
-        List<Error> errors = [];
+        List<Error> errors = new(4);
         while (reader.Read())
         {
             if (reader.TokenType == JsonTokenType.StartObject)
@@ -83,7 +83,7 @@ public sealed class ErrorJsonConverter : JsonConverter<Error>
                     }
                     else if (!string.IsNullOrEmpty(propname))
                     {
-                        extensionData ??= [];
+                        extensionData ??= new(4);
                         extensionData.Add(new(propname, propvalue));
                     }
 

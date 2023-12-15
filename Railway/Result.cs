@@ -136,6 +136,7 @@ public readonly struct Result<T> : IEquatable<Result<T>>
     {
         Value = value;
         State = ResultState.Success;
+        Error = default;
     }
 
     [Pure] public static explicit operator Result(Result<T> result) => result.State switch
@@ -263,7 +264,12 @@ public readonly struct SuccessUnit : IEquatable<SuccessUnit>
 }
 
 [Serializable]
-public class ResultNotInitializedException(string variableName = "this") : InvalidOperationException("Result was not properly initialized.")
+public class ResultNotInitializedException : InvalidOperationException
 {
-    public string VariableName { get; } = variableName;
+    public ResultNotInitializedException(string variableName = "this")
+        : base("Result was not properly initialized.")
+    {
+        VariableName = variableName;
+    }
+    public string VariableName { get; }
 }

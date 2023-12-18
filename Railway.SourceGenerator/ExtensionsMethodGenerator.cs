@@ -17,6 +17,7 @@ public class ExtensionsMethodGenerator : IIncrementalGenerator
         new ResultMapExecutor(),
         new ResultBindExecutor(),
         new ResultTapExecutor(),
+        new ResultTryRecoverExecutor(),
         new ResultAppendExecutor(),
         new TryExtensionsExecutor(),
         new EnsureExtensionsExecutor(),

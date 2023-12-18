@@ -128,4 +128,33 @@ public class GeneralUsage
         // Then
         Assert.Equal("satisfied", result);
     }
+
+    [Fact]
+    public void RecoverResultFromFailureState()
+    {
+        // Given
+        Result<string> failed = new NotImplementedException();
+        // When
+        var result = failed.TryRecover(err => 
+        {
+            Assert.IsType<NotImplementedException>(err.ToException());
+            return "recovered";
+        });
+        // Then
+        Assert.True(result.IsSuccess);
+        Assert.Equal("recovered", result.Value);
+    }
+
+    [Fact]
+    public void WhenCanNotRecoverResultFromFailureState()
+    {
+        // Given
+        var error = Error.New("test");
+        Result<string> failed = new NotImplementedException();
+        // When
+        var result = failed.TryRecover(err => error);
+        // Then
+        Assert.True(result.IsFailure);
+        Assert.Equal(error, result.Error);
+    }
 }

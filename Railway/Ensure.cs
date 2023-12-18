@@ -34,18 +34,6 @@ public static partial class Ensure
             _ => throw new EnsureNotInitializedException(nameof(ensureTask))
         };
     }
-
-    [Pure] public static Ensure<string> NotWhitespace(this in Ensure<string> ensure, Error error = default!)
-    {
-        return ensure.State switch
-        {
-            ResultState.Success => string.IsNullOrWhiteSpace(ensure.Value)
-                ? new(error ?? Error.New(DefaultErrorType, $"Value {{{ensure.ValueExpression}}} is empty or consists exclusively of white-space characters."), ensure.ValueExpression)
-                : new(ensure.Value, ensure.ValueExpression),
-            ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
-            _ => throw new EnsureNotInitializedException(nameof(ensure))
-        };
-    }
 }
 
 public readonly struct Ensure<T>

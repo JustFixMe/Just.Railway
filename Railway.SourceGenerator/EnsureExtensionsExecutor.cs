@@ -41,20 +41,44 @@ public sealed class EnsureExtensionsExecutor : IGeneratorExecutor
 
         var sb = new StringBuilder();
 
-        sb.AppendLine($"#region Satisfies");
+        sb.AppendLine("#region Satisfies");
         errorGenerationDefinitions.ForEach(def => GenerateSatisfiesExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
         sb.AppendLine("#endregion");
 
-        sb.AppendLine($"#region NotNull");
+        sb.AppendLine("#region NotNull");
         errorGenerationDefinitions.ForEach(def => GenerateNotNullExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
         sb.AppendLine("#endregion");
 
-        sb.AppendLine($"#region NotEmpty");
+        sb.AppendLine("#region NotEmpty");
         errorGenerationDefinitions.ForEach(def => GenerateNotEmptyExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
         sb.AppendLine("#endregion");
 
+        sb.AppendLine("#region NotWhitespace");
+        errorGenerationDefinitions.ForEach(def => GenerateNotWhitespaceExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
+        sb.AppendLine("#endregion");
 
         return sb.ToString();
+    }
+
+    private void GenerateNotWhitespaceExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
+    {
+        string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} is empty or consists exclusively of white-space characters.\")";
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<string> NotWhitespace(this in Ensure<string> ensure, {{errorParameterDecl}})
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => string.IsNullOrWhiteSpace(ensure.Value)
+                    ? new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression)
+                    : new(ensure.Value!, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
     }
 
     private void GenerateNotEmptyExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)

@@ -69,9 +69,9 @@ Result<T> Bar()
 ```csharp
 Result<int> result = GetResult();
 
-var value = result
-    .Append("new")
-    .Map((i, s) => $"{s} result {i}")
+string value = result
+    .Append("new") // -> Result<(int, string)>
+    .Map((i, s) => $"{s} result {i}") // -> Result<string>
     .Match(
         onSuccess: x => x,
         onFailure: err => err.ToString()
@@ -79,6 +79,17 @@ var value = result
 // value: "new result 1"
 
 Result<int> GetResult() => Result.Success(1);
+```
+
+#### Recover from failure
+
+```csharp
+Result<string> failed = new NotImplementedException();
+
+Result<string> result = failed.TryRecover(err => err.Type == "System.NotImplementedException"
+    ? "recovered"
+    : err);
+// result with value: "recovered"
 ```
 
 ### Try
@@ -99,9 +110,9 @@ int SomeFunction() => 1;
 ### Ensure
 
 ```csharp
-var value = GetValue();
-Result<int> result = Ensure.That(value)
-    .NotNull()
+int? value = GetValue();
+Result<int> result = Ensure.That(value) // -> Ensure<int?>
+    .NotNull() // -> Ensure<int>
     .Satisfies(i => i < 100)
     .Result();
 

@@ -8,6 +8,7 @@ internal enum ResultState : byte
 
 public readonly partial struct Result : IEquatable<Result>
 {
+    internal SuccessUnit Value => new();
     internal readonly Error? Error;
     internal readonly ResultState State;
 
@@ -51,13 +52,18 @@ public readonly partial struct Result : IEquatable<Result>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator Result(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Result(Exception exception) => new(
+        new ExceptionalError(exception ?? throw new ArgumentNullException(nameof(exception))));
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator Result<SuccessUnit>(Result result) => result.State switch
     {
         ResultState.Success => new(new SuccessUnit()),
         ResultState.Error => new(result.Error!),
         _ => throw new ResultNotInitializedException(nameof(result))
     };
-    
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static explicit operator Result(SuccessUnit _) => new(null);
+
     [Pure] public bool IsSuccess => Error is null;
     [Pure] public bool IsFailure => Error is not null;
 
@@ -139,14 +145,20 @@ public readonly struct Result<T> : IEquatable<Result<T>>
         Error = default;
     }
 
-    [Pure] public static explicit operator Result(Result<T> result) => result.State switch
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static explicit operator Result(Result<T> result) => result.State switch
     {
         ResultState.Success => new(null),
         ResultState.Error => new(result.Error!),
         _ => throw new ResultNotInitializedException(nameof(result))
     };
-    [Pure] public static implicit operator Result<T>(Error error) => new(error);
-    [Pure] public static implicit operator Result<T>(T value) => new(value);
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Result<T>(Error error) => new(error);
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Result<T>(Exception exception) => new(
+        new ExceptionalError(exception ?? throw new ArgumentNullException(nameof(exception))));
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Result<T>(T value) => new(value);
     [Pure] public bool IsSuccess => State == ResultState.Success;
     [Pure] public bool IsFailure => State == ResultState.Error;
 

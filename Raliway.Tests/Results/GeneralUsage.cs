@@ -138,7 +138,12 @@ public class GeneralUsage
         var result = failed.TryRecover(err => 
         {
             Assert.IsType<NotImplementedException>(err.ToException());
-            return "recovered";
+
+            if (err.Type == "System.NotImplementedException")
+                return "recovered";
+
+            Assert.Fail();
+            return "";
         });
         // Then
         Assert.True(result.IsSuccess);
@@ -152,7 +157,14 @@ public class GeneralUsage
         var error = Error.New("test");
         Result<string> failed = new NotImplementedException();
         // When
-        var result = failed.TryRecover(err => error);
+        var result = failed.TryRecover(err =>
+        {
+            if (err.Type == "System.NotImplementedException")
+                return error;
+            
+            Assert.Fail();
+            return "";
+        });
         // Then
         Assert.True(result.IsFailure);
         Assert.Equal(error, result.Error);

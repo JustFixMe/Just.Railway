@@ -178,14 +178,17 @@ public sealed class ExceptionalError : Error
 {
     internal readonly Exception? Exception;
 
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static string ToErrorType(Type exceptionType) => exceptionType.FullName ?? exceptionType.Name;
+
     internal ExceptionalError(Exception exception)
-        : this(exception.GetType().FullName ?? exception.GetType().Name, exception.Message)
+        : this(ToErrorType(exception.GetType()), exception.Message)
     {
         Exception = exception;
         ExtensionData = ExtractExtensionData(exception);
     }
     internal ExceptionalError(string message, Exception exception)
-        : this(exception.GetType().FullName ?? exception.GetType().Name, message)
+        : this(ToErrorType(exception.GetType()), message)
     {
         Exception = exception;
         ExtensionData = ExtractExtensionData(exception);

@@ -8,32 +8,9 @@ public static partial class Ensure
 
     [Pure] public static Ensure<T> That<T>(T value, [CallerArgumentExpression(nameof(value))]string valueExpression = "") => new(value, valueExpression);
 
-    [Pure] public static Result<T> Result<T>(this in Ensure<T> ensure) => ensure.State switch
-    {
-        ResultState.Success => new(ensure.Value),
-        ResultState.Error => new(ensure.Error!),
-        _ => throw new EnsureNotInitializedException(nameof(ensure))
-    };
-    [Pure] public static async Task<Result<T>> Result<T>(this Task<Ensure<T>> ensureTask)
-    {
-        var ensure = await ensureTask.ConfigureAwait(false);
-        return ensure.State switch
-        {
-            ResultState.Success => new(ensure.Value),
-            ResultState.Error => new(ensure.Error!),
-            _ => throw new EnsureNotInitializedException(nameof(ensureTask))
-        };
-    }
-    [Pure] public static async ValueTask<Result<T>> Result<T>(this ValueTask<Ensure<T>> ensureTask)
-    {
-        var ensure = await ensureTask.ConfigureAwait(false);
-        return ensure.State switch
-        {
-            ResultState.Success => new(ensure.Value),
-            ResultState.Error => new(ensure.Error!),
-            _ => throw new EnsureNotInitializedException(nameof(ensureTask))
-        };
-    }
+    [Pure] public static Result<T> Result<T>(this in Ensure<T> ensure) => ensure;
+    [Pure] public static async Task<Result<T>> Result<T>(this Task<Ensure<T>> ensureTask) => await ensureTask.ConfigureAwait(false);
+    [Pure] public static async ValueTask<Result<T>> Result<T>(this ValueTask<Ensure<T>> ensureTask) => await ensureTask.ConfigureAwait(false);
 }
 
 public readonly struct Ensure<T>
@@ -58,6 +35,22 @@ public readonly struct Ensure<T>
         Value = default!;
         State = ResultState.Error;
     }
+
+    [Pure]
+    public static implicit operator Result<T>(in Ensure<T> ensure) => ensure.State switch
+    {
+        ResultState.Success => new(ensure.Value),
+        ResultState.Error => new(ensure.Error!),
+        _ => throw new EnsureNotInitializedException(nameof(ensure))
+    };
+
+    [Pure]
+    public static explicit operator Result(in Ensure<T> ensure) => ensure.State switch
+    {
+        ResultState.Success => new(null),
+        ResultState.Error => new(ensure.Error!),
+        _ => throw new EnsureNotInitializedException(nameof(ensure))
+    };
 }
 
 [Serializable]

@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
@@ -45,6 +42,10 @@ public sealed class EnsureExtensionsExecutor : IGeneratorExecutor
         errorGenerationDefinitions.ForEach(def => GenerateSatisfiesExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
         sb.AppendLine("#endregion");
 
+        sb.AppendLine("#region Null");
+        errorGenerationDefinitions.ForEach(def => GenerateNullExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
+        sb.AppendLine("#endregion");
+
         sb.AppendLine("#region NotNull");
         errorGenerationDefinitions.ForEach(def => GenerateNotNullExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
         sb.AppendLine("#endregion");
@@ -55,6 +56,34 @@ public sealed class EnsureExtensionsExecutor : IGeneratorExecutor
 
         sb.AppendLine("#region NotWhitespace");
         errorGenerationDefinitions.ForEach(def => GenerateNotWhitespaceExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
+        sb.AppendLine("#endregion");
+
+        sb.AppendLine("#region True");
+        errorGenerationDefinitions.ForEach(def => GenerateTrueExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
+        sb.AppendLine("#endregion");
+
+        sb.AppendLine("#region False");
+        errorGenerationDefinitions.ForEach(def => GenerateFalseExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
+        sb.AppendLine("#endregion");
+
+        sb.AppendLine("#region EqualTo");
+        errorGenerationDefinitions.ForEach(def => GenerateEqualToExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
+        sb.AppendLine("#endregion");
+
+        sb.AppendLine("#region LessThan");
+        errorGenerationDefinitions.ForEach(def => GenerateLessThanExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
+        sb.AppendLine("#endregion");
+
+        sb.AppendLine("#region GreaterThan");
+        errorGenerationDefinitions.ForEach(def => GenerateGreaterThanExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
+        sb.AppendLine("#endregion");
+
+        sb.AppendLine("#region LessThanOrEqualTo");
+        errorGenerationDefinitions.ForEach(def => GenerateLessThanOrEqualToExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
+        sb.AppendLine("#endregion");
+
+        sb.AppendLine("#region GreaterThanOrEqualTo");
+        errorGenerationDefinitions.ForEach(def => GenerateGreaterThanOrEqualToExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
         sb.AppendLine("#endregion");
 
         return sb.ToString();
@@ -117,6 +146,44 @@ public sealed class EnsureExtensionsExecutor : IGeneratorExecutor
             };
         }
         """));
+    }
+
+    private void GenerateNullExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
+    {
+        string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} is not null.\")";
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<T?> Null<T>(this in Ensure<T?> ensure, {{errorParameterDecl}})
+            where T : struct
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => !ensure.Value.HasValue
+                    ? new(default(T?)!, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<T?> Null<T>(this in Ensure<T?> ensure, {{errorParameterDecl}})
+            where T : class
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => ensure.Value is null
+                    ? new(default(T?)!, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
     }
 
     private void GenerateNotNullExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
@@ -226,6 +293,185 @@ public sealed class EnsureExtensionsExecutor : IGeneratorExecutor
                     : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
                 ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
                 _ => throw new EnsureNotInitializedException(nameof(ensureTask))
+            };
+        }
+        """);
+    }
+
+    private void GenerateTrueExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
+    {
+        string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} is not true.\")";
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<bool> True(this in Ensure<bool> ensure, {{errorParameterDecl}})
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => ensure.Value == true
+                    ? new(ensure.Value!, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<bool> True(this in Ensure<bool?> ensure, {{errorParameterDecl}})
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => ensure.Value == true
+                    ? new(ensure.Value.Value, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
+    }
+
+    private void GenerateFalseExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
+    {
+        string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} is not false.\")";
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<bool> False(this in Ensure<bool> ensure, {{errorParameterDecl}})
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => ensure.Value == false
+                    ? new(ensure.Value!, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
+
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<bool> False(this in Ensure<bool?> ensure, {{errorParameterDecl}})
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => ensure.Value == false
+                    ? new(ensure.Value.Value, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
+    }
+
+    private void GenerateEqualToExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
+    {
+        string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} is not equal to requirement.\")";
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<T> EqualTo<T>(this in Ensure<T> ensure, T requirement, {{errorParameterDecl}})
+            where T : IEquatable<T>
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => ensure.Value.Equals(requirement)
+                    ? new(ensure.Value, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
+    }
+
+    private void GenerateLessThanExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
+    {
+        string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} is not less than requirement.\")";
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<T> LessThan<T>(this in Ensure<T> ensure, T requirement, {{errorParameterDecl}})
+            where T : IComparable<T>
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => ensure.Value.CompareTo(requirement) < 0
+                    ? new(ensure.Value, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
+    }
+
+    private void GenerateGreaterThanExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
+    {
+        string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} is not greater than requirement.\")";
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<T> GreaterThan<T>(this in Ensure<T> ensure, T requirement, {{errorParameterDecl}})
+            where T : IComparable<T>
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => ensure.Value.CompareTo(requirement) > 0
+                    ? new(ensure.Value, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
+    }
+
+    private void GenerateLessThanOrEqualToExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
+    {
+        string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} is greater than requirement.\")";
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<T> LessThanOrEqualTo<T>(this in Ensure<T> ensure, T requirement, {{errorParameterDecl}})
+            where T : IComparable<T>
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => ensure.Value.CompareTo(requirement) <= 0
+                    ? new(ensure.Value, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
+    }
+
+    private void GenerateGreaterThanOrEqualToExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
+    {
+        string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} is less than requirement.\")";
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<T> GreaterThanOrEqualTo<T>(this in Ensure<T> ensure, T requirement, {{errorParameterDecl}})
+            where T : IComparable<T>
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => ensure.Value.CompareTo(requirement) >= 0
+                    ? new(ensure.Value, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
             };
         }
         """);

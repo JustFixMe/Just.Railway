@@ -7,8 +7,9 @@ public class Satisfy
     {
         var result = Ensure.That(69)
             .Satisfies(i => i < 100)
+            .LessThan(100)
             .Result();
-        
+
         Assert.True(result.IsSuccess);
         Assert.Equal(69, result.Value);
     }
@@ -18,8 +19,9 @@ public class Satisfy
         var error = Error.New(Ensure.DefaultErrorType, "Value {69} does not satisfy the requirement.");
         var result = Ensure.That(69)
             .Satisfies(i => i > 100)
+            .GreaterThan(100)
             .Result();
-        
+
         Assert.True(result.IsFailure);
         Assert.Equal(error, result.Error);
     }
@@ -32,8 +34,9 @@ public class Satisfy
             .NotEmpty()
             .NotWhitespace()
             .Satisfies(s => s == "69")
+            .EqualTo("69")
             .Result();
-        
+
         Assert.True(result.IsSuccess);
         Assert.Equal("69", result.Value);
     }
@@ -47,8 +50,9 @@ public class Satisfy
             .NotEmpty()
             .NotWhitespace()
             .Satisfies(s => s == "69")
+            .EqualTo("69")
             .Result();
-        
+
         Assert.True(result.IsFailure);
         Assert.Equal(error, result.Error);
     }

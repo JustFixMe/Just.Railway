@@ -49,7 +49,7 @@ public sealed class ErrorJsonConverter : JsonConverter<Error>
         => new(errorInfo.Type, errorInfo.Message) { ExtensionData = errorInfo.ExtensionData };
     internal static (string Type, string Message, ImmutableDictionary<string, string> ExtensionData) ReadOne(ref Utf8JsonReader reader)
     {
-        List<KeyValuePair<string, string>>? extensionData = null;
+        ImmutableDictionary<string, string>.Builder? extensionData = null;
         string type = "error";
         string message = "";
         while (reader.Read())
@@ -83,8 +83,8 @@ public sealed class ErrorJsonConverter : JsonConverter<Error>
                     }
                     else if (!string.IsNullOrEmpty(propname))
                     {
-                        extensionData ??= new(4);
-                        extensionData.Add(new(propname, propvalue));
+                        extensionData ??= ImmutableDictionary.CreateBuilder<string, string>();
+                        extensionData.Add(propname, propvalue);
                     }
 
                     break;
@@ -95,7 +95,7 @@ public sealed class ErrorJsonConverter : JsonConverter<Error>
             }
         }
         endLoop:
-        return (type, message, extensionData?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty);
+        return (type, message, extensionData?.ToImmutable() ?? ImmutableDictionary<string, string>.Empty);
     }
     internal static void WriteOne(Utf8JsonWriter writer, Error value)
     {

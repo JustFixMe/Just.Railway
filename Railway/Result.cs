@@ -1,4 +1,3 @@
-
 namespace Just.Railway;
 
 internal enum ResultState : byte

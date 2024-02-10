@@ -70,6 +70,10 @@ public sealed class EnsureExtensionsExecutor : IGeneratorExecutor
         errorGenerationDefinitions.ForEach(def => GenerateEqualToExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
         sb.AppendLine("#endregion");
 
+        sb.AppendLine("#region NotEqualTo");
+        errorGenerationDefinitions.ForEach(def => GenerateNotEqualToExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
+        sb.AppendLine("#endregion");
+
         sb.AppendLine("#region LessThan");
         errorGenerationDefinitions.ForEach(def => GenerateLessThanExtensions(sb, def.ErrorParameterDecl, def.ErrorValueExpr));
         sb.AppendLine("#endregion");
@@ -384,6 +388,27 @@ public sealed class EnsureExtensionsExecutor : IGeneratorExecutor
             return ensure.State switch
             {
                 ResultState.Success => ensure.Value.Equals(requirement)
+                    ? new(ensure.Value, ensure.ValueExpression)
+                    : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
+                ResultState.Error => new(ensure.Error!, ensure.ValueExpression),
+                _ => throw new EnsureNotInitializedException(nameof(ensure))
+            };
+        }
+        """);
+    }
+
+    private void GenerateNotEqualToExtensions(StringBuilder sb, string errorParameterDecl, string errorValueExpr)
+    {
+        string defaultErrorExpr = "?? Error.New(DefaultErrorType, $\"Value {{{ensure.ValueExpression}}} is equal to requirement.\")";
+        sb.AppendLine($$"""
+        [PureAttribute]
+        [GeneratedCodeAttribute("{{nameof(EnsureExtensionsExecutor)}}", "1.0.0.0")]
+        public static Ensure<T> NotEqualTo<T>(this in Ensure<T> ensure, T requirement, {{errorParameterDecl}})
+            where T : IEquatable<T>
+        {
+            return ensure.State switch
+            {
+                ResultState.Success => !ensure.Value.Equals(requirement)
                     ? new(ensure.Value, ensure.ValueExpression)
                     : new({{errorValueExpr}} {{defaultErrorExpr}}, ensure.ValueExpression),
                 ResultState.Error => new(ensure.Error!, ensure.ValueExpression),

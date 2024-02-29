@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Just.Railway;
 
 public static partial class ResultExtensions
@@ -80,7 +82,7 @@ public static partial class ResultExtensions
 
     public static Result Merge(this IEnumerable<Result> results)
     {
-        List<Error>? errors = null;
+        ImmutableArray<Error>.Builder? errors = null;
         bool hasErrors = false;
 
         foreach (var result in results.OrderBy(x => x.State))
@@ -89,8 +91,8 @@ public static partial class ResultExtensions
             {
                 case ResultState.Error:
                     hasErrors = true;
-                    errors ??= new(4);
-                    errors.Add(result.Error!);
+                    errors ??= ImmutableArray.CreateBuilder<Error>();
+                    ManyErrors.AppendSanitized(errors, result.Error!);
                     break;
 
                 case ResultState.Success:
@@ -102,7 +104,7 @@ public static partial class ResultExtensions
         }
         afterLoop:
         return hasErrors
-            ? new(new ManyErrors(errors!))
+            ? new(new ManyErrors(errors!.ToImmutable()))
             : new(null);
     }
     public static async Task<Result> Merge(this IEnumerable<Task<Result>> tasks)
@@ -113,8 +115,8 @@ public static partial class ResultExtensions
 
     public static Result<IEnumerable<T>> Merge<T>(this IEnumerable<Result<T>> results)
     {
-        List<T>? values = null;
-        List<Error>? errors = null;
+        ImmutableList<T>.Builder? values = null;
+        ImmutableArray<Error>.Builder? errors = null;
         bool hasErrors = false;
 
         foreach (var result in results.OrderBy(x => x.State))
@@ -123,13 +125,13 @@ public static partial class ResultExtensions
             {
                 case ResultState.Error:
                     hasErrors = true;
-                    errors ??= new(4);
-                    errors.Add(result.Error!);
+                    errors ??= ImmutableArray.CreateBuilder<Error>();
+                    ManyErrors.AppendSanitized(errors, result.Error!);
                     break;
 
                 case ResultState.Success:
                     if (hasErrors) goto afterLoop;
-                    values ??= new(4);
+                    values ??= ImmutableList.CreateBuilder<T>();
                     values.Add(result.Value);
                     break;
                     
@@ -138,8 +140,8 @@ public static partial class ResultExtensions
         }
         afterLoop:
         return hasErrors
-            ? new(new ManyErrors(errors!))
-            : new((IEnumerable<T>?)values ?? Array.Empty<T>());
+            ? new(new ManyErrors(errors!.ToImmutable()))
+            : new(values is not null ? values.ToImmutable() : ImmutableList<T>.Empty);
     }
     public static async Task<Result<IEnumerable<T>>> Merge<T>(this IEnumerable<Task<Result<T>>> tasks)
     {

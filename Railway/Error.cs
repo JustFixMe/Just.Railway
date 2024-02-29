@@ -52,7 +52,7 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Many(Error error1, Error error2) => (error1, error2) switch
     {
-        (null, null) => new ManyErrors(new List<Error>()),
+        (null, null) => new ManyErrors(ImmutableArray<Error>.Empty),
         (Error err, null) => err,
         (Error err, { IsEmpty: true }) => err,
         (null, Error err) => err,
@@ -137,12 +137,14 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
         return string.Compare(Message, other.Message);
     }
 
-    [Pure] public override string ToString() => Message;
+    [Pure] public sealed override string ToString() => Message;
     [Pure] public void Deconstruct(out string type, out string message)
     {
         type = Type;
         message = Message;
     }
+
+    [Pure] internal virtual Error AccessUnsafe(int position) => this;
 }
 
 [JsonConverter(typeof(ExpectedErrorJsonConverter))]
@@ -221,7 +223,7 @@ public sealed class ExceptionalError : Error
         if (!(exception.Data?.Count > 0))
         return ImmutableDictionary<string, string>.Empty;
 
-        List<KeyValuePair<string, string>>? values = null;
+        ImmutableDictionary<string, string>.Builder? values = null;
 
         foreach (var key in exception.Data.Keys)
         {
@@ -234,63 +236,70 @@ public sealed class ExceptionalError : Error
             var valueString = value.ToString();
             if (string.IsNullOrEmpty(keyString) || string.IsNullOrEmpty(valueString)) continue;
 
-            values ??= new List<KeyValuePair<string, string>>(4);
-            values.Add(new(keyString, valueString));
+            values ??= ImmutableDictionary.CreateBuilder<string, string>();
+            values.Add(keyString, valueString);
         }
-        return values?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty;
+        return values is not null ? values.ToImmutable() : ImmutableDictionary<string, string>.Empty;
     }
 }
 
 [JsonConverter(typeof(ManyErrorsJsonConverter))]
 public sealed class ManyErrors : Error, IEnumerable<Error>, IReadOnlyList<Error>
 {
-    private readonly List<Error> _errors;
+    private readonly ImmutableArray<Error> _errors;
     [Pure] public IEnumerable<Error> Errors { get => _errors; }
 
-    internal ManyErrors(List<Error> errors) => _errors = errors;
+    internal ManyErrors(ImmutableArray<Error> errors) => _errors = errors;
     internal ManyErrors(Error head, Error tail)
     {
-        _errors = new List<Error>(head.Count + tail.Count);
+        var headCount = head.Count;
+        var tailCount = tail.Count;
+        var errors = ImmutableArray.CreateBuilder<Error>(headCount + tailCount);
 
-        if (head.Count == 1)
-            _errors.Add(head);
-        else if (head.Count > 1)
-            _errors.AddRange(head.ToEnumerable());
+        if (headCount > 0)
+            AppendSanitized(errors, head);
 
-        if (tail.Count == 1)
-            _errors.Add(tail);
-        else if (tail.Count > 1)
-            _errors.AddRange(tail.ToEnumerable());
+        if (tailCount > 0)
+            AppendSanitized(errors, tail);
+
+        _errors = errors.MoveToImmutable();
     }
     public ManyErrors(IEnumerable<Error> errors)
     {
-        _errors = errors.SelectMany(x => x.ToEnumerable())
-            .Where(x => !x.IsEmpty)
-            .ToList();
+        var unpackedErrors = ImmutableArray.CreateBuilder<Error>();
+
+        foreach (var err in errors)
+        {
+            if (err.IsEmpty) continue;
+
+            AppendSanitized(unpackedErrors, err);
+        }
+
+        _errors = unpackedErrors.ToImmutable();
     }
 
     [Pure] public override string Type => "many_errors";
-    [Pure] public override string Message => ToFullArrayString();
-    [Pure] public override string ToString() => ToFullArrayString();
 
-    [Pure] private string ToFullArrayString()
+    private string? _lazyMessage = null;
+    [Pure] public override string Message => _lazyMessage ??= ToFullArrayString(_errors);
+
+    [Pure] private static string ToFullArrayString(in ImmutableArray<Error> errors)
     {
         var separator = Environment.NewLine;
-        var lastIndex = _errors.Count - 1;
 
         var sb = new StringBuilder();
-        for (int i = 0; i < _errors.Count; i++)
+        for (int i = 0; i < errors.Length; i++)
         {
-            sb.Append(_errors[i]);
-            if (i < lastIndex)
-                sb.Append(separator);
+            sb.Append(errors[i]);
+            sb.Append(separator);
         }
+        sb.Remove(sb.Length - separator.Length, separator.Length);
 
         return sb.ToString();
     }
 
-    [Pure] public override int Count => _errors.Count;
-    [Pure] public override bool IsEmpty => _errors.Count == 0;
+    [Pure] public override int Count => _errors.Length;
+    [Pure] public override bool IsEmpty => _errors.IsEmpty;
     [Pure] public override bool IsExpected => _errors.All(static x => x.IsExpected);
     [Pure] public override bool IsExeptional => _errors.Any(static x => x.IsExeptional);
 
@@ -303,22 +312,19 @@ public sealed class ManyErrors : Error, IEnumerable<Error>, IReadOnlyList<Error>
     {
         if (other is null)
             return -1;
-        if (other.Count != _errors.Count)
-            return _errors.Count.CompareTo(other.Count);
-        
-        var compareResult = 0;
-        int i = 0;
-        foreach (var otherErr in other.ToEnumerable())
+        if (other.Count != _errors.Length)
+            return _errors.Length.CompareTo(other.Count);
+
+        for (int i = 0; i < _errors.Length; i++)
         {
-            var thisErr = _errors[i++];
-            compareResult = thisErr.CompareTo(otherErr);
+            var compareResult = _errors[i].CompareTo(other.AccessUnsafe(i));
             if (compareResult != 0)
             {
                 return compareResult;
             }
         }
 
-        return compareResult;
+        return 0;
     }
     [Pure] public override bool IsSimilarTo([NotNullWhen(true)] Error? other)
     {
@@ -326,15 +332,13 @@ public sealed class ManyErrors : Error, IEnumerable<Error>, IReadOnlyList<Error>
         {
             return false;
         }
-        if (_errors.Count != other.Count)
+        if (_errors.Length != other.Count)
         {
             return false;
         }
-        int i = 0;
-        foreach (var otherErr in other.ToEnumerable())
+        for (int i = 0; i < _errors.Length; i++)
         {
-            var thisErr = _errors[i++];
-            if (!thisErr.IsSimilarTo(otherErr))
+            if (!_errors[i].IsSimilarTo(other.AccessUnsafe(i)))
             {
                 return false;
             }
@@ -347,36 +351,49 @@ public sealed class ManyErrors : Error, IEnumerable<Error>, IReadOnlyList<Error>
         {
             return false;
         }
-        if (_errors.Count != other.Count)
+        if (_errors.Length != other.Count)
         {
             return false;
         }
-        int i = 0;
-        foreach (var otherErr in other.ToEnumerable())
+        for (int i = 0; i < _errors.Length; i++)
         {
-            var thisErr = _errors[i++];
-            if (!thisErr.Equals(otherErr))
+            if (!_errors[i].Equals(other.AccessUnsafe(i)))
             {
                 return false;
             }
         }
         return true;
     }
-    [Pure] public override int GetHashCode()
+
+    private int? _lazyHashCode = null;
+    [Pure] public override int GetHashCode() => _lazyHashCode ??= CalcHashCode(_errors);
+    private static int CalcHashCode(in ImmutableArray<Error> errors)
     {
-        if (_errors.Count == 0)
+        if (errors.IsEmpty)
             return 0;
-        
+
         var hash = new HashCode();
-        foreach (var err in _errors)
+        foreach (var err in errors)
         {
             hash.Add(err);
         }
         return hash.ToHashCode();
     }
 
-    [Pure] public IEnumerator<Error> GetEnumerator() => _errors.GetEnumerator();
-    [Pure] IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    [Pure] public ImmutableArray<Error>.Enumerator GetEnumerator() => _errors.GetEnumerator();
+    [Pure] IEnumerator<Error> IEnumerable<Error>.GetEnumerator() => Errors.GetEnumerator();
+    [Pure] IEnumerator IEnumerable.GetEnumerator() => Errors.GetEnumerator();
+
+    internal static void AppendSanitized(ImmutableArray<Error>.Builder errors, Error error)
+    {
+        if (error is ManyErrors many)
+            errors.AddRange(many._errors);
+        else
+            errors.Add(error);
+    }
+
+    [Pure] internal override Error AccessUnsafe(int position) => _errors[position];
 }
 
 [Serializable]

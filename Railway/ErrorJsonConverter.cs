@@ -35,7 +35,7 @@ public sealed class ErrorJsonConverter : JsonConverter<Error>
 
     internal static ManyErrors ReadMany(ref Utf8JsonReader reader)
     {
-        List<Error> errors = new(4);
+        var errors = ImmutableArray.CreateBuilder<Error>();
         while (reader.Read())
         {
             if (reader.TokenType == JsonTokenType.StartObject)
@@ -43,7 +43,7 @@ public sealed class ErrorJsonConverter : JsonConverter<Error>
                 errors.Add(ToExpectedError(ReadOne(ref reader)));
             }
         }
-        return new ManyErrors(errors);
+        return new ManyErrors(errors.ToImmutable());
     }
     internal static ExpectedError ToExpectedError(in (string Type, string Message, ImmutableDictionary<string, string> ExtensionData) errorInfo)
         => new(errorInfo.Type, errorInfo.Message) { ExtensionData = errorInfo.ExtensionData };

@@ -7,7 +7,13 @@ internal enum ResultState : byte
 
 public readonly partial struct Result : IEquatable<Result>
 {
-    internal SuccessUnit Value => new();
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Simplified source generation")]
+    internal SuccessUnit Value
+    {
+        [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new();
+    }
+
     internal readonly Error? Error;
     internal readonly ResultState State;
 
@@ -37,10 +43,16 @@ public readonly partial struct Result : IEquatable<Result>
 
 
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result Failure(string error) => Error.New(error ?? throw new ArgumentNullException(nameof(error)));
+
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result Failure(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
 
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result Failure(Exception exception) => new(Error.New(exception) ?? throw new ArgumentNullException(nameof(exception)));
+
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<T> Failure<T>(string error) => Error.New(error ?? throw new ArgumentNullException(nameof(error)));
 
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> Failure<T>(Error error) => new(error ?? throw new ArgumentNullException(nameof(error)));
@@ -66,13 +78,13 @@ public readonly partial struct Result : IEquatable<Result>
     [Pure] public bool IsSuccess => Error is null;
     [Pure] public bool IsFailure => Error is not null;
 
-    [Pure] public bool Success([MaybeNullWhen(false)]out SuccessUnit? u, [MaybeNullWhen(true), NotNullWhen(false)]out Error? error)
+    [Pure] public bool TryGetValue([MaybeNullWhen(false)]out SuccessUnit? u, [MaybeNullWhen(true), NotNullWhen(false)]out Error? error)
     {
         switch (State)
         {
             case ResultState.Success:
                 u = new SuccessUnit();
-                error = default;
+                error = null;
                 return true;
 
             case ResultState.Error:
@@ -161,13 +173,13 @@ public readonly struct Result<T> : IEquatable<Result<T>>
     [Pure] public bool IsSuccess => State == ResultState.Success;
     [Pure] public bool IsFailure => State == ResultState.Error;
 
-    [Pure] public bool Success([MaybeNullWhen(false)]out T value, [MaybeNullWhen(true), NotNullWhen(false)]out Error? error)
+    [Pure] public bool TryGetValue([MaybeNullWhen(false)]out T value, [MaybeNullWhen(true), NotNullWhen(false)]out Error? error)
     {
         switch (State)
         {
             case ResultState.Success:
                 value = Value;
-                error = default;
+                error = null;
                 return true;
 
             case ResultState.Error:

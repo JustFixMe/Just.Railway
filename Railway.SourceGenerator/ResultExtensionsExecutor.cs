@@ -50,6 +50,13 @@ internal abstract class ResultExtensionsExecutor : IGeneratorExecutor
             1 => $"Result<{string.Join(", ", templateArgNames)}>",
             _ => $"Result<({string.Join(", ", templateArgNames)})>",
         };
+    protected static string JoinArguments(string arg1, string arg2) => (arg1, arg2) switch
+    {
+        ("", "") => "",
+        (string arg, "") => arg,
+        ("", string arg) => arg,
+        _ => $"{arg1}, {arg2}"
+    };
 
     protected static string GenerateResultValueExpansion(ImmutableArray<string> templateArgNames)
     {

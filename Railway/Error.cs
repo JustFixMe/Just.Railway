@@ -144,7 +144,7 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
         message = Message;
     }
 
-    [Pure] internal virtual Error AccessUnsafe(int position) => this;
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)] internal virtual Error AccessUnsafe(int position) => this;
 }
 
 [JsonConverter(typeof(ExpectedErrorJsonConverter))]
@@ -393,7 +393,7 @@ public sealed class ManyErrors : Error, IEnumerable<Error>, IReadOnlyList<Error>
             errors.Add(error);
     }
 
-    [Pure] internal override Error AccessUnsafe(int position) => _errors[position];
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)] internal override Error AccessUnsafe(int position) => _errors[position];
 }
 
 [Serializable]

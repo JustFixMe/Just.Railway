@@ -68,7 +68,7 @@ public sealed class ErrorJsonConverter : JsonConverter<Error>
 
                     if (!(reader.TokenType == JsonTokenType.String))
                         throw new JsonException("Unable to deserialize Error type.");
-                    
+
                     var propvalue = reader.GetString();
                     if (string.IsNullOrEmpty(propvalue))
                         break;
@@ -84,7 +84,7 @@ public sealed class ErrorJsonConverter : JsonConverter<Error>
                     else if (!string.IsNullOrEmpty(propname))
                     {
                         extensionData ??= ImmutableDictionary.CreateBuilder<string, string>();
-                        extensionData.Add(propname, propvalue);
+                        extensionData[propname] = propvalue;
                     }
 
                     break;

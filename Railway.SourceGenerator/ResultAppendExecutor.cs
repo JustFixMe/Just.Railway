@@ -460,12 +460,4 @@ internal sealed class ResultAppendExecutor : ResultExtensionsExecutor
         }
         """);
     }
-
-    internal static string JoinArguments(string arg1, string arg2) => (arg1, arg2) switch
-    {
-        ("", "") => "",
-        (string arg, "") => arg,
-        ("", string arg) => arg,
-        _ => $"{arg1}, {arg2}"
-    };
 }

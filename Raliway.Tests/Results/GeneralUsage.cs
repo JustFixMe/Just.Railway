@@ -22,7 +22,7 @@ public class GeneralUsage
                     return "";
                 }
             );
-        
+
         Assert.Equal("TEST_1;SOME", result);
     }
 
@@ -31,7 +31,7 @@ public class GeneralUsage
     {
         // Given
         var error = Error.New("test");
-        
+
         // When
 
         var result = Result.Success()
@@ -94,7 +94,7 @@ public class GeneralUsage
     {
         // Given
         var error = Error.New("test");
-        
+
         // When
 
         var result = await Result.Success()
@@ -168,5 +168,48 @@ public class GeneralUsage
         // Then
         Assert.True(result.IsFailure);
         Assert.Equal(error, result.Error);
+    }
+
+    [Fact]
+    public void WhenExtendingSuccessWithSuccess_ShouldReturnSuccess()
+    {
+        var success = Result.Success(1)
+            .Append("2");
+
+        var result = success
+            .Extend((i, s) => Result.Success($"{i} + {s}"));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal((1, "2", "1 + 2"), result.Value);
+    }
+
+    [Fact]
+    public void WhenExtendingFailureWithSuccess_ShouldNotEvaluateExtension()
+    {
+        var failure = Result.Success(1)
+            .Append(Result.Failure<string>("failure"));
+
+        var result = failure
+            .Extend((i, s) =>
+            {
+                Assert.Fail();
+                return Result.Success("");
+            });
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(Error.New("failure"), result.Error);
+    }
+
+    [Fact]
+    public void WhenExtendingSuccessWithFailure_ShouldReturnFailure()
+    {
+        var success = Result.Success(1)
+            .Append("2");
+
+        var result = success
+            .Extend((i, s) => Result.Failure<string>("failure"));
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(Error.New("failure"), result.Error);
     }
 }

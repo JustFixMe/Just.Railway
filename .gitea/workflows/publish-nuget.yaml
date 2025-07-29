@@ -16,7 +16,7 @@ jobs:
     - name: Setup .NET
       uses: https://github.com/actions/setup-dotnet@v3
       with:
-        dotnet-version: 8.x
+        dotnet-version: 9.x
 
     - name: Restore dependencies
       run: dotnet restore Railway/Railway.csproj

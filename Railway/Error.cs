@@ -221,15 +221,22 @@ public sealed class ExceptionalError : Error
     private static ImmutableDictionary<string, string> ExtractExtensionData(Exception exception)
     {
         if (!(exception.Data?.Count > 0))
-        return ImmutableDictionary<string, string>.Empty;
+            return ImmutableDictionary<string, string>.Empty;
 
+        var values = GetGenericExtData(exception);
+
+        return values is not null ? values.ToImmutable() : ImmutableDictionary<string, string>.Empty;
+    }
+
+    private static ImmutableDictionary<string, string>.Builder? GetGenericExtData(Exception ex)
+    {
         ImmutableDictionary<string, string>.Builder? values = null;
 
-        foreach (var key in exception.Data.Keys)
+        foreach (var key in ex.Data.Keys)
         {
             if (key is null) continue;
 
-            var value = exception.Data[key];
+            var value = ex.Data[key];
             if (value is null) continue;
 
             var keyString = key.ToString();
@@ -239,7 +246,8 @@ public sealed class ExceptionalError : Error
             values ??= ImmutableDictionary.CreateBuilder<string, string>();
             values.Add(keyString, valueString);
         }
-        return values is not null ? values.ToImmutable() : ImmutableDictionary<string, string>.Empty;
+
+        return values;
     }
 }
 
